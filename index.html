@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>GEOG 392 Pipeline Monitoring</title>
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+<header class="top" id="top"></header>
+<main class="wrap">
+
+  <div class="hero">
+    <h1 id="headline">GEOG 392 Pipeline Monitoring</h1>
+    <p>We use Sentinel-2 satellite imagery and Python to measure vegetation and moisture along Texas liquid pipelines, and compare it with similar land nearby. <a href="tasks/">What last year's version got wrong</a></p>
+  </div>
+
+  <h2>Our impact</h2>
+  <div class="card stats" id="impact"></div>
+
+  <div id="meeting"></div>
+
+  <h2>Start here</h2>
+  <div class="steps">
+    <div class="card step">
+      <div class="n">1</div>
+      <h3>Get a GitHub account</h3>
+      <p>Free, with any email. Send Landon your username so you can be added to this private repository, where our scripts are kept.</p>
+      <a class="btn" href="https://github.com/signup">Create an account</a>
+    </div>
+    <div class="card step">
+      <div class="n">2</div>
+      <h3>Check in</h3>
+      <p>A one-minute form on GitHub. It adds you to this page and asks which group interests you and what computer you use.</p>
+      <a class="btn primary" id="joinLink" href="https://github.com/landon2199/texas-pipeline-sentinel2/issues/new?template=join.yml">Check in</a>
+    </div>
+    <div class="card step">
+      <div class="n">3</div>
+      <h3>Read the plan</h3>
+      <p>Five minutes. Then register for Google Earth Engine for noncommercial use and check that Python runs on your laptop or in Google Colab.</p>
+      <a class="btn" href="plan/">The plan</a>
+    </div>
+  </div>
+
+  <h2>Team · <span id="count"></span></h2>
+  <div class="steps" id="groups"></div>
+  <div id="others"></div>
+  <p class="small"><a href="plan/">What each group is doing</a> · <a href="tasks/">Every known problem and task</a></p>
+
+  <h2>Timeline</h2>
+  <div class="card"><ul class="tl" id="timeline"></ul></div>
+
+</main>
+<footer class="wrap">Built with Claude (Anthropic); maintained by Landon.</footer>
+
+<script src="assets/site.js"></script>
+<script>
+topBar('home', '');
+loadData('').then(({ team, people, today, iso }) => {
+  const daysLeft = Math.max(0, Math.round((new Date(team.target + 'T12:00:00') - today) / 864e5));
+  document.getElementById('headline').innerHTML = `<em>${daysLeft} days</em> to GIS Day, ${day(team.target)}`;
+  document.getElementById('joinLink').href = `https://github.com/${repoSlug()}/issues/new?template=join.yml`;
+  document.getElementById('impact').innerHTML = impactTiles(team);
+  document.getElementById('count').textContent = `${people.length}${team.size ? ' of ' + team.size : ''} checked in`;
+
+  // Meetings: numbered by their place in team.json. Each has its own poll; a vote button shows
+  // while `when` is empty, the time and place once it is filled in. `done` hides a past meeting.
+  const meets = (team.meetings ?? []).map((x, i) => ({ ...x, n: i + 1 })).filter((x) => !x.done && (x.when || x.poll));
+  if (meets.length) {
+    document.getElementById('meeting').innerHTML = `<h2>Meetings</h2><div class="card meets">` + meets.map((x) => {
+      const voting = !x.when && /^https:\/\//.test(x.poll ?? '');
+      const line = x.when ? [x.when, x.where].filter(Boolean).join(' · ') : 'No time yet. Mark every time you can make.';
+      return `<div class="meet">
+        <div><h3>Meeting ${x.n}${x.name ? ` <span class="small">· ${esc(x.name)}</span>` : ''}</h3><p>${esc(line)}</p></div>
+        ${voting ? `<a class="btn primary" href="${esc(x.poll)}">Vote for a time</a>` : ''}
+      </div>`;
+    }).join('') + `</div>`;
+  }
+
+  // One card per group from team.json, then anyone who is not in a group yet.
+  const groups = team.groups ?? [];
+  const keys = new Set(groups.map((g) => g.key));
+  document.getElementById('groups').innerHTML = groups.map((g) => {
+    const members = people.filter((p) => p.group === g.key);
+    return `<div class="card group">
+      <h3>${esc(g.name)}</h3>
+      <p>${esc(g.goal)}</p>
+      ${reportLine(g)}
+      <div class="people">${members.map(personRow).join('') || '<span class="small">Members appear here after check-in.</span>'}</div>
+    </div>`;
+  }).join('');
+  const rest = people.filter((p) => !keys.has(p.group));
+  const lead = rest.filter((p) => p.group === 'Lead');
+  const waiting = rest.filter((p) => p.group !== 'Lead');
+  document.getElementById('others').innerHTML =
+    (lead.length ? `<div class="card people extra"><span class="small">Team lead</span>${lead.map(personRow).join('')}</div>` : '') +
+    (waiting.length ? `<div class="card people extra"><span class="small">Checked in, group to come</span>${waiting.map(personRow).join('')}</div>` : '');
+
+  let placed = false;
+  const rows = [];
+  for (const m of team.milestones) {
+    if (!placed && m.date > iso) { rows.push(`<li class="now"><i></i><time>${day(iso)}</time><span>Today</span></li>`); placed = true; }
+    const when = m.end ? `${day(m.date)} – ${day(m.end)}` : day(m.date);
+    rows.push(`<li class="${(m.end ?? m.date) < iso ? 'past' : ''}"><i></i><time>${when}</time><span>${esc(m.label)}</span></li>`);
+  }
+  if (!placed) rows.push(`<li class="now"><i></i><time>${day(iso)}</time><span>Today</span></li>`);
+  document.getElementById('timeline').innerHTML = rows.join('');
+}).catch((e) => { document.getElementById('impact').textContent = 'Could not load the data: ' + e.message; });
+</script>
+</body>
+</html>

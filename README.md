@@ -1,0 +1,97 @@
+# Texas pipeline monitoring with Sentinel-2
+
+GEOG 392 team project, fall 2026. We measure vegetation (NDVI) and moisture (NDWI) next to Texas
+liquid hydrocarbon pipelines with Sentinel-2 imagery, and compare each distance band with a
+reference band of similar land further out. Everything runs in Python, using the Earth Engine
+Python API for the imagery.
+
+This repository is private while we work. We plan to make it public for GIS Day.
+
+## What is where
+
+| Folder or file | What it holds |
+|---|---|
+| `index.html`, `plan/`, `tasks/`, `assets/` | The team dashboard |
+| `team.json` | Everything the dashboard shows: notice, meetings, groups, tasks, known problems, timeline |
+| `data/status.json` | Who has checked in. Rebuilt automatically; do not edit |
+| `legacy-2025/` | Last year's Earth Engine script, notebook, sample tables, and the audit of what went wrong |
+
+Large data does not go in this repository. Last year's full project is in the shared Google Drive
+folder **392 Project**. New outputs go in the shared Drive folder or in Earth Engine assets.
+
+## How we work together
+
+1. **Get access.** Send Landon your GitHub username to be added as a collaborator. Register for
+   Google Earth Engine for noncommercial use, and ask to be added to the team's Cloud project.
+2. **Check in.** Open a new issue with the **Check in** form. It puts you on the dashboard.
+3. **Take a task.** Tasks are listed in `team.json` and on the Tasks page. Say in the team chat
+   which one you are starting.
+4. **Work on a branch.** Never commit straight to `main`.
+
+   ```
+   git checkout -b ids-stable-segments
+   git add .
+   git commit -m "Give each segment one ID for all distances"
+   git push -u origin ids-stable-segments
+   ```
+
+5. **Open a pull request** and ask one teammate to review it. Merge once they approve.
+6. **Questions and bugs** go in GitHub issues, so the answer stays findable.
+
+### Never commit
+
+- Passwords, API keys, or Earth Engine credential and service account files.
+- Large data: shapefiles, geodatabases, rasters, or tables over a few MB.
+
+`.gitignore` blocks the common cases, but check `git status` before every commit.
+
+## Viewing the dashboard
+
+The pages load `team.json` and `data/status.json` from the same folder, so they work wherever the
+folder is served.
+
+- **As a website:** GitHub Pages can publish a site from a private repository only on a paid plan.
+  GitHub Pro is free for students through the GitHub Student Developer Pack. Once you have it, go to
+  Settings, then Pages, and choose **Deploy from a branch**, `main`, root. The published site can be
+  opened by anyone with the link, even though the repository is private.
+- **On your own computer:** from the repository folder run `python -m http.server`, then open
+  http://localhost:8000. Opening `index.html` directly from the file browser will not load the data.
+
+## Editing `team.json`
+
+**Put someone in a group and give them a task:**
+
+```json
+{ "github": "their-username", "name": "First name", "group": "A", "task": "Build the reference ring" }
+```
+
+`group` is the `key` of one of the entries under `groups` (`A`, `B` or `C`), or `Lead`.
+
+**Move a task or a problem along:** change its `status`.
+
+- Tasks: `todo`, `doing`, `done`.
+- Problems: `found` (seen in the audit), `confirmed` (checked on the full data), `fixed` (the new
+  pipeline handles it and a test shows it).
+
+**Record a delivered report:** paste its link into that group's `report.url`.
+
+**Change the notice:** edit the `notice` text, or set it to `""` to remove the bar.
+
+**Meetings:** each meeting has its own poll and is numbered by its place in the list. Add a line for
+a new meeting with its Rallly link. Once the time is set, fill in `when` and `where`. After the
+meeting, set `done` to `true` and keep the line.
+
+After any change, open Home, Plan and Tasks and click every link and button.
+
+## The check-in refresh
+
+`.github/workflows/status.yml` runs `scripts/build-status.mjs` whenever someone submits or edits a
+check-in, or when `team.json` changes on `main`. It reads the issues labelled `join` and commits
+`data/status.json`. It has no timed schedule, to save the private repository's free Actions
+minutes. To refresh by hand, open Actions, choose **Refresh dashboard data**, then **Run workflow**.
+
+## AI use
+
+The dashboard, the data script and the workflow were drafted with Claude (Anthropic) on 2026-10-01
+at Landon's request and reviewed by Landon. Log any AI help you use in your own work: the tool,
+what you asked, what it did, and what you changed.

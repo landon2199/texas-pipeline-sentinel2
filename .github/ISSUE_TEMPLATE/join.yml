@@ -1,0 +1,60 @@
+name: Check in
+description: Add yourself to the team dashboard. Takes one minute.
+title: "Check in"
+labels: ["join"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Submitting this adds you to the team dashboard under your GitHub username.
+        If the dashboard is published as a website, anyone with the link can see it, so a first name is enough.
+  - type: input
+    id: name
+    attributes:
+      label: Name to show
+      description: First name is fine.
+    validations:
+      required: true
+  - type: dropdown
+    id: track
+    attributes:
+      label: Which work interests you most
+      options:
+        - Data and segments (geopandas)
+        - Earth Engine in Python
+        - Analysis and maps
+        - No preference
+    validations:
+      required: true
+  - type: dropdown
+    id: computer
+    attributes:
+      label: Computer
+      options:
+        - Windows
+        - Mac
+        - Linux
+        - Only campus lab computers
+    validations:
+      required: true
+  - type: dropdown
+    id: python
+    attributes:
+      label: Python
+      options:
+        - Comfortable
+        - Some experience
+        - New to it
+    validations:
+      required: true
+  - type: dropdown
+    id: ee
+    attributes:
+      label: Earth Engine account
+      description: Register for noncommercial use at earthengine.google.com if you have not yet.
+      options:
+        - Registered
+        - Not yet
+        - Not sure
+    validations:
+      required: true

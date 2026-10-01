@@ -1,0 +1,36 @@
+# Large GIS data: keep it in the shared Drive folder or Earth Engine assets
+*.gdb/
+*.shp
+*.shx
+*.dbf
+*.sbn
+*.sbx
+*.cpg
+*.prj
+*.shp.xml
+*.gpkg
+*.tif
+*.tiff
+*.zip
+*.parquet
+/raw/
+/outputs/
+
+# Credentials: never commit these
+.env
+*credentials*.json
+*service-account*.json
+*service_account*.json
+*.pem
+.config/earthengine/
+
+# Python and notebook clutter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Operating system files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Plan · GEOG 392 Pipeline Monitoring</title>
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<header class="top" id="top"></header>
+<main class="wrap">
+
+  <div class="hero">
+    <h1>The plan</h1>
+    <p>Find out whether vegetation and moisture next to Texas liquid pipelines differ from similar land nearby, using Sentinel-2 imagery and a pipeline written in Python.</p>
+  </div>
+
+  <h2>What the project is</h2>
+  <div class="card">
+    <p style="margin-top:0">For GIS Day 2025, Landon buffered the Texas Railroad Commission's liquid hydrocarbon pipelines at 100, 250 and 500 m, split the buffers by ecoregion, and used Google Earth Engine to average Sentinel-2 <b>NDVI</b> (greenness) and a water index over each piece for March to May 2025.</p>
+    <p>That version had three limits. It covered <b>one season</b>, so it says nothing about change. It had <b>no comparison area</b>, so it cannot tell a pipeline effect from what the land is like anyway. And its <b>IDs did not match</b> between distances or tables, so some rows were lost or could not be compared. The <a href="../tasks/">Tasks page</a> lists every problem found.</p>
+    <p style="margin-bottom:0">This year we rebuild it as one Python program: stable segment IDs, distance rings with a reference ring further out, finer EPA Level III ecoregions, soil class, and the same spring window for 2019 to 2025.</p>
+  </div>
+
+  <h2>How we work</h2>
+  <div class="steps">
+    <div class="card step">
+      <div class="n">1</div>
+      <h3>Branch and pull request</h3>
+      <p>Each task gets its own branch. When it works, open a pull request and ask one teammate to review it before it joins <code>main</code>.</p>
+    </div>
+    <div class="card step">
+      <div class="n">2</div>
+      <h3>Data stays out of GitHub</h3>
+      <p>Large tables, shapefiles and imagery live in the shared Drive folder or as Earth Engine assets. Only code, small samples and documents go in the repository.</p>
+    </div>
+    <div class="card step">
+      <div class="n">3</div>
+      <h3>Scripts run from start to finish</h3>
+      <p>No step done by hand in a desktop program. If a teammate cannot rerun it from the repository, it is not finished.</p>
+    </div>
+  </div>
+
+  <h2>The three groups</h2>
+  <p class="small" style="margin-top:0">Each group delivers one report. Group A's segment layer feeds group B's extraction, and group B's results feed group C's analysis, so A and B start first and C builds its tools on sample data meanwhile.</p>
+  <div class="steps">
+    <div class="card group">
+      <h3>Data and segments</h3>
+      <p>One clean pipeline segment layer with stable IDs, rings and a reference ring.</p>
+      <ul>
+        <li><b>Report:</b> an audit of last year's tables and a description of the new segment layer.</li>
+        <li>Uses Python with geopandas. Works on a Mac.</li>
+        <li>Finds out why the polygon count exploded, and fixes it.</li>
+      </ul>
+    </div>
+    <div class="card group">
+      <h3>Earth Engine in Python</h3>
+      <p>Last year's Earth Engine script, rebuilt as a documented Python program.</p>
+      <ul>
+        <li><b>Report:</b> the extraction method: sensor, dates, cloud mask, indices and counts.</li>
+        <li>Uses the Earth Engine Python API. Everyone needs a registered account.</li>
+        <li>First goal: reproduce last year's 250 m Deserts values.</li>
+      </ul>
+    </div>
+    <div class="card group">
+      <h3>Analysis and maps</h3>
+      <p>Join the results, compare each ring with its reference, and map it.</p>
+      <ul>
+        <li><b>Report:</b> results by ecoregion, soil, distance and pipe diameter, with the GIS Day maps.</li>
+        <li>Uses Python: pandas, geopandas and a statistics package.</li>
+        <li>Builds and tests its tools on last year's sample tables first.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="small">Who is in which group is on the <a href="../">Home page</a> after check-in. Every task is on the <a href="../tasks/">Tasks page</a>. Landon leads the team and is not in a group.</p>
+
+  <h2>Week by week</h2>
+  <div class="card scroll"><table>
+    <thead><tr><th>Week of</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td>Oct 5</td><td>Kickoff: groups confirmed. Proposal goes to the professor. Everyone registers for Earth Engine and is added to the repository.</td></tr>
+      <tr><td>Oct 12</td><td>Update presentation. Two-week milestones by Fri Oct 16: stable IDs on a 1,000-segment test set, the Python script matching one region of last year's values, and the audit report.</td></tr>
+      <tr><td>Oct 19</td><td>Rings and reference ring for one ecoregion. The join reports matched, unmatched and blank rows.</td></tr>
+      <tr><td>Oct 26</td><td>Midterm week: keep it light. Extraction runs for 2025 on all ecoregions.</td></tr>
+      <tr><td>Nov 2</td><td>All years, 2019 to 2025, extracted. Soil class added. First comparisons by Fri Nov 6.</td></tr>
+      <tr><td>Nov 9</td><td>Results, maps and reports finished. Work frozen Fri Nov 13.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Rules</h2>
+  <div class="card">
+    <ul style="margin:0;padding-left:20px">
+      <li>Never commit passwords, keys or Earth Engine credential files, even though the repository is private.</li>
+      <li>Never commit large data. Put it in the shared Drive folder and write down where it is.</li>
+      <li>Work on a copy of last year's data, never the original.</li>
+      <li>One change per pull request, reviewed by one teammate.</li>
+      <li>Log any AI help you use: the tool, what you asked, what it did, what you changed.</li>
+    </ul>
+  </div>
+
+</main>
+<script src="../assets/site.js"></script>
+<script>topBar('plan', '../');</script>
+</body>
+</html>
