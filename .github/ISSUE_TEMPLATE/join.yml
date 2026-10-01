@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Submitting this adds you to the team dashboard under your GitHub username.
-        If the dashboard is published as a website, anyone with the link can see it, so a first name is enough.
+        The dashboard and this repository are public, so a first name is enough.
   - type: input
     id: name
     attributes:

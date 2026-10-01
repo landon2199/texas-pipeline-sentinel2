@@ -5,7 +5,8 @@ liquid hydrocarbon pipelines with Sentinel-2 imagery, and compare each distance 
 reference band of similar land further out. Everything runs in Python, using the Earth Engine
 Python API for the imagery.
 
-This repository is private while we work. We plan to make it public for GIS Day.
+This repository is public, and so is the dashboard. Anyone can read what is here, so never commit
+credentials or anything you would not want shared.
 
 ## What is where
 
@@ -21,8 +22,9 @@ folder **392 Project**. New outputs go in the shared Drive folder or in Earth En
 
 ## How we work together
 
-1. **Get access.** Send Landon your GitHub username to be added as a collaborator. Register for
-   Google Earth Engine for noncommercial use, and ask to be added to the team's Cloud project.
+1. **Get access.** Anyone can read the repository. To push branches, send Landon your GitHub
+   username to be added as a collaborator. Register for Google Earth Engine for noncommercial use,
+   and ask to be added to the team's Cloud project.
 2. **Check in.** Open a new issue with the **Check in** form. It puts you on the dashboard.
 3. **Take a task.** Tasks are listed in `team.json` and on the Tasks page. Say in the team chat
    which one you are starting.
@@ -50,10 +52,9 @@ folder **392 Project**. New outputs go in the shared Drive folder or in Earth En
 The pages load `team.json` and `data/status.json` from the same folder, so they work wherever the
 folder is served.
 
-- **As a website:** GitHub Pages can publish a site from a private repository only on a paid plan.
-  GitHub Pro is free for students through the GitHub Student Developer Pack. Once you have it, go to
-  Settings, then Pages, and choose **Deploy from a branch**, `main`, root. The published site can be
-  opened by anyone with the link, even though the repository is private.
+- **As a website:** https://landon2199.github.io/texas-pipeline-sentinel2/ once GitHub Pages is
+  turned on: Settings, then Pages, **Deploy from a branch**, `main`, root. Changes to `main` appear
+  there within a couple of minutes.
 - **On your own computer:** from the repository folder run `python -m http.server`, then open
   http://localhost:8000. Opening `index.html` directly from the file browser will not load the data.
 
@@ -87,8 +88,8 @@ After any change, open Home, Plan and Tasks and click every link and button.
 
 `.github/workflows/status.yml` runs `scripts/build-status.mjs` whenever someone submits or edits a
 check-in, or when `team.json` changes on `main`. It reads the issues labelled `join` and commits
-`data/status.json`. It has no timed schedule, to save the private repository's free Actions
-minutes. To refresh by hand, open Actions, choose **Refresh dashboard data**, then **Run workflow**.
+`data/status.json`. It has no timed schedule because check-ins
+trigger it on their own. To refresh by hand, open Actions, choose **Refresh dashboard data**, then **Run workflow**.
 
 ## AI use
 
