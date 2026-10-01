@@ -4,49 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Tasks · GEOG 392 Pipeline Monitoring</title>
-<link rel="stylesheet" href="../assets/site.css">
+<meta http-equiv="refresh" content="0; url=../plan/">
+<title>Plan · GEOG 392 Pipeline Monitoring</title>
+<link rel="canonical" href="../plan/">
 </head>
 <body>
-<header class="top" id="top"></header>
-<main class="wrap">
-
-  <div class="hero">
-    <h1>Tasks</h1>
-    <p>The problems found in last year's data and Earth Engine script, and what each group is doing about them. The full audit is in the <code>legacy-2025</code> folder of the repository.</p>
-  </div>
-
-  <h2>Known problems from last year</h2>
-  <div class="card scroll"><table id="problems"><thead><tr><th>Problem</th><th>Where it is</th><th>Group</th><th>Status</th></tr></thead><tbody></tbody></table></div>
-  <p class="small"><b>Found:</b> seen in the October audit of last year's files. <b>Confirmed:</b> checked on the full data. <b>Fixed:</b> the new pipeline handles it and a test shows it.</p>
-
-  <h2>Each group's task list</h2>
-  <div id="lists"></div>
-
-  <h2>Who is doing what</h2>
-  <div class="card scroll"><table id="team"><thead><tr><th>Who</th><th>Group</th><th>Working on</th></tr></thead><tbody></tbody></table></div>
-
-</main>
-<script src="../assets/site.js"></script>
-<script>
-topBar('tasks', '../');
-loadData('../').then(({ team, people }) => {
-  document.querySelector('#problems tbody').innerHTML = (team.problems ?? []).map((p) =>
-    `<tr><td>${esc(p.name)}</td><td>${esc(p.where)}</td><td>${p.group ? esc(groupName(team, p.group)) : '<span class="small">No group yet</span>'}</td><td>${state(p.status)}</td></tr>`).join('');
-
-  // One table per group: its tasks from team.json and where each stands.
-  document.getElementById('lists').innerHTML = (team.groups ?? []).map((g) => `
-    <div class="card scroll list">
-      <h3>${esc(g.name)}</h3>
-      <table><thead><tr><th>Task</th><th>Status</th></tr></thead><tbody>` +
-      (g.tasks ?? []).map((t) => `<tr><td>${esc(t.what)}</td><td>${state(t.status)}</td></tr>`).join('') +
-      `</tbody></table>
-    </div>`).join('');
-
-  document.querySelector('#team tbody').innerHTML = people.map((p) =>
-    `<tr><td><b>${esc(p.name || p.github)}</b><br><a class="small" href="https://github.com/${esc(p.github)}">@${esc(p.github)}</a></td>
-     <td>${esc(groupName(team, p.group))}</td><td>${p.task ? esc(p.task) : '<span class="small">No task yet</span>'}</td></tr>`).join('');
-}).catch((e) => { document.querySelector('#problems tbody').innerHTML = `<tr><td colspan="4">Could not load the data: ${esc(e.message)}</td></tr>`; });
-</script>
+<p>Tasks are now on <a href="../plan/">the Plan page</a>.</p>
 </body>
 </html>

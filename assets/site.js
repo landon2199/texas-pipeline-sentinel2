@@ -31,7 +31,7 @@ function topBar(active, base) {
   const link = (key, href, text) => `<a class="${active === key ? 'on' : ''}" href="${href}">${text}</a>`;
   document.getElementById('top').innerHTML = `<div class="wrap">
     <a class="brand" href="${base || './'}">GEOG 392 <span>· Pipeline Monitoring</span></a>
-    <nav>${link('home', base || './', 'Home')}${link('plan', base + 'plan/', 'Plan')}${link('tasks', base + 'tasks/', 'Tasks')}</nav>
+    <nav>${link('home', base || './', 'Home')}${link('plan', base + 'plan/', 'Plan')}</nav>
   </div>`;
   // A site-wide notice: shown on every page while team.json has a `notice`; empty it to remove it.
   fetch(base + 'team.json?t=' + Date.now()).then((r) => r.json()).then((team) => {

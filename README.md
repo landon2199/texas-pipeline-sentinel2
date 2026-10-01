@@ -12,7 +12,7 @@ credentials or anything you would not want shared.
 
 | Folder or file | What it holds |
 |---|---|
-| `index.html`, `plan/`, `tasks/`, `assets/` | The team dashboard |
+| `index.html`, `plan/`, `assets/` | The team dashboard: Home (what to do now) and Plan (groups, tasks, dates) |
 | `team.json` | Everything the dashboard shows: notice, meetings, groups, tasks, known problems, timeline |
 | `data/status.json` | Who has checked in. Rebuilt automatically; do not edit |
 | `legacy-2025/` | Last year's Earth Engine script, notebook, sample tables, and the audit of what went wrong |
@@ -26,7 +26,7 @@ folder **392 Project**. New outputs go in the shared Drive folder or in Earth En
    username to be added as a collaborator. Register for Google Earth Engine for noncommercial use,
    and ask to be added to the team's Cloud project.
 2. **Check in.** Open a new issue with the **Check in** form. It puts you on the dashboard.
-3. **Take a task.** Tasks are listed in `team.json` and on the Tasks page. Say in the team chat
+3. **Take a task.** Tasks are listed in `team.json` and on the Plan page. Say in the team chat
    which one you are starting.
 4. **Work on a branch.** Never commit straight to `main`.
 
@@ -82,7 +82,7 @@ folder is served.
 a new meeting with its Rallly link. Once the time is set, fill in `when` and `where`. After the
 meeting, set `done` to `true` and keep the line.
 
-After any change, open Home, Plan and Tasks and click every link and button.
+After any change, open Home and Plan and click every link and button. The old `tasks/` address redirects to Plan.
 
 ## The check-in refresh
 
