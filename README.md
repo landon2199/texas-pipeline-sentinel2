@@ -15,10 +15,14 @@ credentials or anything you would not want shared.
 | `index.html`, `plan/`, `assets/` | The team dashboard: Home (what to do now) and Plan (groups, tasks, dates) |
 | `team.json` | Everything the dashboard shows: notice, meetings, groups, tasks, known problems, timeline |
 | `data/status.json` | Who has checked in. Rebuilt automatically; do not edit |
-| `legacy-2025/` | Last year's Earth Engine script, notebook, sample tables, and the audit of what went wrong |
+| `legacy-2025/` | Last year's Earth Engine script, notebook, sample tables, and a summary of what went wrong |
+| `audit/` | Scripts that checked last year's tables and geodatabase, their results, and the findings in `audit/README.md` |
+| `extract/` | The Earth Engine Python program (Sentinel-2, with Landsat as an option for earlier years) that computes vegetation and moisture for each polygon, and a check against last year |
+| `leaks/` | Reported pipeline spills from PHMSA, matched to the Railroad Commission lines, and the proposal figure |
+| `requirements.txt` | The Python packages to install: `pip install -r requirements.txt` |
 
 Large data does not go in this repository. Last year's full project is in the shared Google Drive
-folder **392 Project**. New outputs go in the shared Drive folder or in Earth Engine assets.
+folder `GEOG_392/projects/data`. New outputs go in that Drive folder or in Earth Engine assets.
 
 ## How we work together
 
@@ -90,9 +94,3 @@ After any change, open Home and Plan and click every link and button. The old `t
 check-in, or when `team.json` changes on `main`. It reads the issues labelled `join` and commits
 `data/status.json`. It has no timed schedule because check-ins
 trigger it on their own. To refresh by hand, open Actions, choose **Refresh dashboard data**, then **Run workflow**.
-
-## AI use
-
-The dashboard, the data script and the workflow were drafted with Claude (Anthropic) on 2026-10-01
-at Landon's request and reviewed by Landon. Log any AI help you use in your own work: the tool,
-what you asked, what it did, and what you changed.

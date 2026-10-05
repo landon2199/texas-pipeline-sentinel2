@@ -13,13 +13,14 @@
 
   <div class="hero">
     <h1>The plan</h1>
-    <p>Is the land next to Texas pipelines less green or drier than similar land nearby? We answer that with satellite imagery and Python.</p>
+    <p>Can satellites see pipeline leaks? We compare vegetation along Texas pipelines with similar land nearby, and before and after reported spills, from 2018 to 2026, with Sentinel-2 images at 10 m.</p>
   </div>
 
   <h2>What we are doing</h2>
   <div class="card">
-    <p style="margin-top:0">Last year Landon measured greenness (<b>NDVI</b>) and a water index along Texas liquid pipelines for one spring, using Sentinel-2 satellite imagery in Google Earth Engine.</p>
-    <p style="margin-bottom:0">This year we rebuild it properly, all in Python: <b>seven springs</b> instead of one (2019 to 2025), a <b>comparison strip</b> further from each pipeline, and <b>one ID per pipeline segment</b> so results line up.</p>
+    <p style="margin-top:0">Pipelines are buried, so a leak may first show up as weaker or drier plants along the line. Last year Landon measured greenness (<b>NDVI</b>) and a water index along Texas liquid pipelines for one spring, but with no comparison land and no leak records.</p>
+    <p>This year we ask two questions. Is vegetation next to pipelines different from <b>similar land 500 to 1,000 m away</b>? And do <b>reported leaks</b> leave a mark: 83 crude oil and fuel spills on Texas pipeline rights-of-way since mid-2018?</p>
+    <p style="margin-bottom:0">We use every Railroad Commission pipeline as delivered, the EPA ecoregions, soil and land cover data, and Sentinel-2 images for <b>every spring from 2018 to 2026</b>, all in Python in Google Colab.</p>
   </div>
 
   <h2>Get set up</h2>
@@ -27,7 +28,7 @@
     <ul style="margin:0;padding-left:20px">
       <li>Send Landon your GitHub username so you can be added to the repository.</li>
       <li>Register for <a href="https://earthengine.google.com/noncommercial/">Google Earth Engine</a> (free for students).</li>
-      <li>Check that Python runs on your laptop, or use <a href="https://colab.research.google.com/">Google Colab</a> in a browser.</li>
+      <li>Open <a href="https://colab.research.google.com/">Google Colab</a> with your Google account. Our notebooks run there, in a browser, on any computer.</li>
     </ul>
   </div>
 
@@ -44,7 +45,6 @@
       <li>This site and the repository are public. Never upload passwords or keys.</li>
       <li>Big data files stay in the shared Drive folder, not on GitHub.</li>
       <li>Each task gets its own branch, and one teammate reviews it before it is merged.</li>
-      <li>Log any AI help you use: the tool, what you asked, what it did, what you changed.</li>
     </ul>
   </div>
 

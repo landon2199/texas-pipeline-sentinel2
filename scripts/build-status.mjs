@@ -1,7 +1,6 @@
 // Builds data/status.json for the team dashboard: the list of people who have checked in.
 // Reads this repository's issues labelled "join" from the GitHub API (read-only) and writes one
 // JSON file the pages load. Run by .github/workflows/status.yml.
-// Drafted with Claude (Anthropic), 2026-10-01.
 import { writeFile, mkdir } from 'node:fs/promises';
 
 const SELF = process.env.GITHUB_REPOSITORY || 'landon2199/texas-pipeline-sentinel2';

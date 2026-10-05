@@ -1,69 +1,85 @@
 {
-  "project": "Texas Pipeline Monitoring with Sentinel-2",
+  "project": "Can Satellites See Pipeline Leaks? Sentinel-2 Vegetation Along Texas Pipelines, 2018-2026",
   "team": "GEOG 392 Pipeline Monitoring",
   "size": 8,
   "target": "2026-11-16",
-  "notice": "Draft plan as of Oct 1. The proposal goes to the professor next week, so groups and tasks may still change.",
+  "notice": "The plan follows the revised proposal of Oct 4: four deliverables in six weeks. Group assignments are a draft until the team confirms them.",
   "meetings": [
     {
       "name": "Kickoff",
       "poll": "https://app.rallly.co/invite/2UTIFsPaGh1O",
-      "when": "",
-      "where": "",
+      "when": "Mon Oct 5, 2:00 pm",
+      "where": "Zoom (link in the group chat)",
       "done": false
     }
   ],
   "groups": [
     {
       "key": "A",
-      "name": "Data and segments",
-      "goal": "Build one clean pipeline segment layer with stable IDs, distance rings and a reference ring.",
+      "name": "Data and zones",
+      "goal": "Deliverable 1, due Oct 23: the zone layer. Segments, rings and spill zones with ecoregion, land cover and soil.",
       "report": {
-        "name": "Data audit and segment layer",
+        "name": "1. Zone layer",
         "url": ""
       },
       "tasks": [
         {
-          "what": "Find out why 16,300 pipelines became 1.86 million polygons at 100 m",
-          "status": "todo"
-        },
-        {
-          "what": "Give every pipeline segment one ID that stays the same at every distance",
-          "status": "todo"
-        },
-        {
-          "what": "Build 0 to 100, 100 to 250 and 250 to 500 m rings, plus a 500 to 1,000 m reference ring",
-          "status": "todo"
+          "what": "Find out why 16,300 pipelines became 1.86 million polygons",
+          "status": "done"
         },
         {
           "what": "Audit last year's tables: rows, blanks and duplicates per ecoregion",
+          "status": "done"
+        },
+        {
+          "what": "Weeks 1-2: cut lines into 1 km segments with stable IDs and build the rings for one ecoregion",
+          "status": "todo"
+        },
+        {
+          "what": "Weeks 1-2: match the reported spills to segments and draw the spill and control circles",
+          "status": "todo"
+        },
+        {
+          "what": "Weeks 3-4: build all zones for the 10,000-segment sample, with ecoregion, land cover and soil texture",
+          "status": "todo"
+        },
+        {
+          "what": "Weeks 5-6: check the results and write the poster's data and methods sections",
           "status": "todo"
         }
       ]
     },
     {
       "key": "B",
-      "name": "Earth Engine in Python",
-      "goal": "Turn last year's Earth Engine script into a documented Python program that runs every region and year.",
+      "name": "Earth Engine",
+      "goal": "Deliverable 2, due Oct 29: the zone statistics. NDVI, NDWI, SAVI and land surface temperature for every zone and year.",
       "report": {
-        "name": "Extraction method and script",
+        "name": "2. Zone statistics",
         "url": ""
       },
       "tasks": [
         {
-          "what": "Get everyone registered for Earth Engine and into one shared Cloud project",
+          "what": "Reproduce last year's 250 m Deserts values in Python",
+          "status": "done"
+        },
+        {
+          "what": "Add Landsat to the Earth Engine program",
+          "status": "done"
+        },
+        {
+          "what": "Weeks 1-2: get everyone registered for Earth Engine and into one shared Cloud project",
           "status": "todo"
         },
         {
-          "what": "Port last year's script to the Python API and match its 250 m Deserts values",
+          "what": "Weeks 1-2: build the Colab extraction notebook and run the 10-spill before-and-after test",
           "status": "todo"
         },
         {
-          "what": "Fix the cloud mask, switch to NDWI from bands 8 and 11, and add pixel counts",
+          "what": "Weeks 3-4: run every spring 2018-2026 for all zones, split by land cover, plus Landsat temperature",
           "status": "todo"
         },
         {
-          "what": "Run March to May for 2019 to 2025 in a loop that exports to Drive",
+          "what": "Weeks 5-6: before-and-after tables for every spill, and layers for the web map",
           "status": "todo"
         }
       ]
@@ -71,26 +87,30 @@
     {
       "key": "C",
       "name": "Analysis and maps",
-      "goal": "Join the results, compare each ring with its reference, and make the GIS Day maps.",
+      "goal": "Deliverable 3, due Nov 6: the results. Ring comparisons, regressions, spill before-and-after and a hot spot map.",
       "report": {
-        "name": "Results and GIS Day maps",
+        "name": "3. Results",
         "url": ""
       },
       "tasks": [
         {
-          "what": "Write one Python join that reports matched, unmatched and blank rows",
+          "what": "Weeks 1-2: write the analysis notebook (NumPy and pandas) on test data",
           "status": "todo"
         },
         {
-          "what": "Add a soil class from gSSURGO or STATSGO2 to each ring",
+          "what": "Weeks 3-4: first ring-versus-comparison results from the early tables",
           "status": "todo"
         },
         {
-          "what": "Compare each ring with its reference by ecoregion and pipe diameter",
+          "what": "Weeks 5-6: linear regressions predicting land surface temperature from NDVI and NDWI",
           "status": "todo"
         },
         {
-          "what": "Make the GIS Day maps with one color scale for every distance",
+          "what": "Weeks 5-6: spill before-and-after against controls, and the hot spot map",
+          "status": "todo"
+        },
+        {
+          "what": "Weeks 5-6: GIS Day maps and the ArcGIS Online web map",
           "status": "todo"
         }
       ]
@@ -98,46 +118,46 @@
   ],
   "problems": [
     {
-      "name": "Join IDs use a space instead of an underscore in one table",
-      "where": "100 m Semi-Arid Plains table",
+      "name": "Overlapping buffers cut each other: 16,303 buffers became 1.86 million pieces at 100 m",
+      "where": "Ecoregion intersect step",
       "group": "A",
-      "status": "found"
+      "status": "confirmed"
     },
     {
-      "name": "17% of rows have no NDVI or NDWI value",
-      "where": "100 m Semi-Arid Plains table",
-      "group": "B",
-      "status": "found"
+      "name": "Distances simplified differently: 85% and 88% of pieces deleted at 250 and 500 m, none at 100 m",
+      "where": "Simplify Polygon step",
+      "group": "A",
+      "status": "confirmed"
     },
     {
-      "name": "Combined tables are smaller than the tables they were built from",
-      "where": "Combined CSVs, all distances",
+      "name": "100 m master table spelled IDs differently, so neither semi-arid ecoregion joined (48% of the 100 m area)",
+      "where": "100 m table join",
       "group": "A",
-      "status": "found"
+      "status": "confirmed"
+    },
+    {
+      "name": "342,254 Plains slivers never sent to Earth Engine: the shapefile hit the 2 GB limit",
+      "where": "100 m Plains export",
+      "group": "A",
+      "status": "confirmed"
     },
     {
       "name": "IDs differ between 100, 250 and 500 m, so distances cannot be compared",
       "where": "Buffer layers",
       "group": "A",
-      "status": "found"
+      "status": "confirmed"
     },
     {
-      "name": "About 110 polygons per pipeline line at 100 m",
-      "where": "Buffer and intersect steps",
+      "name": "No Railroad Commission field is a unique line ID",
+      "where": "Pipeline lines",
       "group": "A",
-      "status": "found"
+      "status": "confirmed"
     },
     {
-      "name": "Plains attribute table sits at the 2 GB shapefile limit",
-      "where": "100 m Plains shapefile",
+      "name": "Buffers and simplifying done in latitude and longitude, not an equal-area projection",
+      "where": "Buffer and simplify steps",
       "group": "A",
-      "status": "found"
-    },
-    {
-      "name": "Simplify Polygon dropped features without a record",
-      "where": "Buffer geometry",
-      "group": "A",
-      "status": "found"
+      "status": "confirmed"
     },
     {
       "name": "Buffers are nested, not rings",
@@ -158,7 +178,13 @@
       "status": "found"
     },
     {
-      "name": "No pixel or image count behind each value",
+      "name": "No pixel or image count behind each value; 158,940 slivers came back blank",
+      "where": "Earth Engine script",
+      "group": "B",
+      "status": "confirmed"
+    },
+    {
+      "name": "Pixels read on a grid in degrees, not Sentinel-2's own grid",
       "where": "Earth Engine script",
       "group": "B",
       "status": "found"
@@ -180,6 +206,12 @@
       "where": "ArcGIS Pro map",
       "group": "C",
       "status": "found"
+    },
+    {
+      "name": "No leak records were used, so leaks were inferred, never measured",
+      "where": "Study design",
+      "group": "C",
+      "status": "found"
     }
   ],
   "members": [
@@ -187,26 +219,26 @@
       "github": "landon2199",
       "name": "Landon",
       "group": "Lead",
-      "task": "Write the proposal and send it to the professor"
+      "task": "Lead: kickoff, update presentation, reviews, then the poster, report and presentation"
     }
   ],
   "milestones": [
     {
       "date": "2026-10-01",
-      "label": "Project changed to pipeline monitoring with Sentinel-2"
+      "label": "Project changed to pipeline monitoring"
     },
     {
       "date": "2026-10-04",
-      "label": "Proposal draft finished"
+      "label": "Revised proposal drafted"
     },
     {
       "date": "2026-10-05",
       "end": "2026-10-07",
-      "label": "Kickoff meeting (time from the poll); proposal to the professor"
+      "label": "Kickoff meeting (time from the poll)"
     },
     {
       "date": "2026-10-09",
-      "label": "Groups set; everyone registered for Earth Engine"
+      "label": "Groups confirmed; everyone registered for Earth Engine"
     },
     {
       "date": "2026-10-12",
@@ -215,7 +247,15 @@
     },
     {
       "date": "2026-10-16",
-      "label": "Two-week milestones: stable IDs, Python script matches 2025 values, audit report"
+      "label": "Two-week milestone: zones for one ecoregion, spills matched, 10-spill check"
+    },
+    {
+      "date": "2026-10-23",
+      "label": "Deliverable 1: zone layer (Group A)"
+    },
+    {
+      "date": "2026-10-29",
+      "label": "Deliverable 2: zone statistics (Group B)"
     },
     {
       "date": "2026-10-30",
@@ -223,11 +263,11 @@
     },
     {
       "date": "2026-11-06",
-      "label": "All years extracted; first comparisons"
+      "label": "Deliverable 3: results (Group C)"
     },
     {
       "date": "2026-11-13",
-      "label": "Results and maps finished; work frozen"
+      "label": "Deliverable 4: GIS Day web map and poster (everyone); work frozen"
     },
     {
       "date": "2026-11-16",
@@ -239,7 +279,7 @@
     },
     {
       "date": "2026-12-06",
-      "label": "Course hard deadline"
+      "label": "Course hard deadline: final report"
     }
   ]
 }

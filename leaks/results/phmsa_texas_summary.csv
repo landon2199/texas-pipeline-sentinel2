@@ -1,0 +1,5 @@
+group,accidents,within_100m_of_a_rrc_line,within_250m,within_500m
+all onshore Texas accidents with coordinates,2456,2149,2338,2391
+on the pipeline right-of-way,446,425,437,438
+"on the right-of-way, line pipe or pipe parts",431,412,422,423
+"on the right-of-way, 5 barrels or more",249,236,244,244

@@ -1,4 +1,4 @@
-// Shared helpers for the team dashboard pages. Drafted with Claude (Anthropic), 2026-10-01.
+// Shared helpers for the team dashboard pages.
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const day = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 const pill = (text, cls = '') => `<span class="pill ${cls}">${esc(text)}</span>`;

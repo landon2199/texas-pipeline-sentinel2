@@ -1,0 +1,4 @@
+distance,pipeline_lines,buffers,after_ecoregion_intersect,after_simplify,removed_by_simplify_kept_as_points,pct_of_pieces_kept,pct_of_area_kept,pieces_under_900m2_before_simplify,pct_of_area_in_those_pieces
+100m,16303,16303,1856841,1856786,55,100.0,100.01,1588504,0.93
+250m,16303,16303,3661062,559411,3101651,15.3,99.35,3134161,0.7
+500m,16303,16303,7756817,950050,6806767,12.2,97.56,6679608,0.68

@@ -1,0 +1,5 @@
+state,pieces,pct_of_pieces,pct_of_area
+blank: Earth Engine returned no value,127865,6.9,0.0
+has a value,1049543,56.5,52.2
+join failed: ID spelled differently in the table,337124,18.2,47.7
+never sent: shapefile hit 2 GB,342254,18.4,0.1
