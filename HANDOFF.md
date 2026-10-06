@@ -167,7 +167,7 @@ Recommended by the audit, for the team to confirm:
   appears in the results.
 - Teammates so far: Jayden (`jfloyd-27`) has ArcGIS Pro on Windows; Henry (`tinlongg`) uses an
   Apple Silicon Mac with 16 GB of memory.
-- Course dates: update presentations Oct 12 to 16, Midterm 2 Oct 30, final
+- Course dates: update presentations Oct 19 to 23 (moved from Oct 12 to 16), Midterm 2 Oct 30, final
   presentations from Nov 23, hard deadline Dec 6.
 
 ## Proposal
