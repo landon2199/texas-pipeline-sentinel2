@@ -1,9 +1,22 @@
-# Texas pipeline monitoring with Sentinel-2
+# Can Satellites See Pipeline Leaks?
 
-GEOG 392 team project, fall 2026. We measure vegetation (NDVI) and moisture (NDWI) next to Texas
-liquid hydrocarbon pipelines with Sentinel-2 imagery, and compare each distance band with a
-reference band of similar land further out. Everything runs in Python, using the Earth Engine
-Python API for the imagery.
+GEOG 392, Group 10, fall 2026.
+
+## [Open the team dashboard](https://landon2199.github.io/texas-pipeline-sentinel2/)
+
+The dashboard shows the plan, the groups, everyone's tasks and the dates.
+
+**You do not need to know GitHub.** Everything you work with is in our shared Google Drive folder,
+**projects**: start with `notebooks > 00_Start_Here`.
+
+---
+
+## For the code
+
+This repository keeps the project's Python code. We test whether Sentinel-2 imagery shows the
+effects of Texas pipelines, and of reported spills, on vegetation from 2018 to 2026, comparing
+strips of land beside each pipeline with similar land farther away. Everything runs in Python,
+using the Earth Engine Python API for the imagery.
 
 This repository is public, and so is the dashboard. Anyone can read what is here, so never commit
 credentials or anything you would not want shared.
@@ -27,9 +40,9 @@ folder `GEOG_392/projects/data`. New outputs go in that Drive folder or in Earth
 ## How we work together
 
 1. **Get access.** Anyone can read the repository. To push branches, send Landon your GitHub
-   username to be added as a collaborator. Register for Google Earth Engine for noncommercial use,
-   and ask to be added to the team's Cloud project.
-2. **Check in.** Open a new issue with the **Check in** form. It puts you on the dashboard.
+   username to be added as a collaborator. For Earth Engine, send Landon the Google account you
+   use for Colab; Landon adds it to the team's Cloud project.
+2. **Check in (optional).** Open a new issue with the **Check in** form. It puts you on the dashboard.
 3. **Take a task.** Tasks are listed in `team.json` and on the Plan page. Say in the team chat
    which one you are starting.
 4. **Work on a branch.** Never commit straight to `main`.
