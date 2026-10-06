@@ -8,8 +8,8 @@
     {
       "name": "Kickoff",
       "poll": "https://app.rallly.co/invite/2UTIFsPaGh1O",
-      "when": "Mon Oct 5, 2:00 pm",
-      "where": "Zoom (link in the group chat)",
+      "when": "Wednesday Oct 7, time from the poll in the group chat",
+      "where": "Zoom or Discord",
       "done": false
     }
   ],
@@ -232,8 +232,8 @@
       "label": "Revised proposal drafted"
     },
     {
-      "date": "2026-10-05",
-      "label": "Kickoff meeting: Mon Oct 5, 2:00 pm on Zoom"
+      "date": "2026-10-07",
+      "label": "Kickoff call on Zoom or Discord (time from the poll)"
     },
     {
       "date": "2026-10-09",
