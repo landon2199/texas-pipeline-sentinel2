@@ -7,7 +7,7 @@ GEOG 392, Group 10, fall 2026.
 The dashboard shows the plan, the groups, everyone's tasks and the dates.
 
 **You do not need to know GitHub.** Everything you work with is in our shared Google Drive folder,
-**projects**: start with `notebooks > 00_Start_Here`.
+**projects**: open the **START HERE** file at the top of that folder.
 
 ---
 

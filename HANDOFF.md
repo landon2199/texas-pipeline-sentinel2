@@ -16,7 +16,7 @@ updated after the first local session. Delete or update this file once it is out
   Engine Python API instead of the Code Editor.
 - **Everything for the project is in one Google Drive folder,** `GEOG_392\projects` in Landon's
   course folder (`C:\mydrive\Graduate School\Courses\GEOG_392\projects` on the desktop): the
-  proposal, this repository (`texas-pipeline-sentinel2\`) and the team's data (`data\`). On the
+  proposal, this repository (in `code (do not edit)\`) and the team's data (`data\`). On the
   desktop, git's database and the Python environment sit outside Drive in
   `C:\Users\Landon\.geog392` (the repository's `.git` is a one-line pointer file), so Drive never
   syncs them; activate with `C:\Users\Landon\.geog392\venv\Scripts\activate`.
