@@ -23,7 +23,7 @@
     <div class="card step">
       <div class="n">1</div>
       <h3>Open Start Here</h3>
-      <p>The <b>START HERE</b> file at the top of our shared Google Drive folder, <b>projects</b>. Two minutes, no coding needed. You do not need GitHub to work on the project.</p>
+      <p>A one-page <b>START HERE</b> in our Google Drive folder, <b>projects</b>. Landon shares the folder once everything is ready to run. Two minutes, no coding needed, and no GitHub.</p>
     </div>
     <div class="card step">
       <div class="n">2</div>
@@ -55,7 +55,7 @@
 topBar('home', '');
 loadData('').then(({ team, people, today, iso }) => {
   const daysLeft = Math.max(0, Math.round((new Date(team.target + 'T12:00:00') - today) / 864e5));
-  document.getElementById('headline').innerHTML = `<em>${daysLeft} days</em> to GIS Day, ${day(team.target)}`;
+  document.getElementById('headline').innerHTML = `<em>${daysLeft} days</em> to the final report, ${day(team.target)}`;
   document.getElementById('joinLink').href = `https://github.com/${repoSlug()}/issues/new?template=join.yml`;
   document.getElementById('count').textContent = `${people.length}${team.size ? ' of ' + team.size : ''} checked in`;
 

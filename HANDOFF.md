@@ -41,7 +41,7 @@ updated after the first local session. Delete or update this file once it is out
   (`leaks/README.md`): 83 crude or refined-product spills of 5+ barrels on Texas rights-of-way
   since mid-2018 (175 since 2010), 81 within 100 m of a mapped line. The work is six weeks and
   four deliverables: 1 zone layer (group A, Oct 23), 2 zone statistics (group B, Oct 29),
-  3 results (group C, Nov 6), 4 GIS Day web map and poster (everyone, Nov 13); the steps per
+  3 results (group C, Nov 6), 4 web map and poster (everyone, Nov 13); the steps per
   group and fortnight are in `team.json` and the proposal. Following the instructor's Oct 2
   suggestions, the analysis flattens the NDVI and NDWI arrays into linear regressions that
   predict land surface temperature, and statewide embeddings (Google's Satellite Embedding
@@ -107,7 +107,7 @@ New to the project? Read this file, `legacy-2025/README.md` and `audit/README.md
 - Python for every step; nothing done by hand in ArcGIS Pro. This also lets Mac users take part.
 - Large data stays in Google Drive or Earth Engine assets, never in the repository.
 - Three groups: **A** Data and zones, **B** Earth Engine, **C** Analysis and maps, each owning
-  one deliverable, with the fourth (GIS Day web map and poster) shared. Tasks for each are in
+  one deliverable, with the fourth (web map and poster) shared. Tasks for each are in
   `team.json`.
 - Zones, from the revised proposal: 1 km segments, each in one ecoregion; rings on both sides at
   0 to 50, 50 to 100, 100 to 250 and 250 to 500 m plus a 500 to 1,000 m comparison ring, replacing
@@ -119,7 +119,8 @@ New to the project? Read this file, `legacy-2025/README.md` and `audit/README.md
   in the regressions. This replaced splitting by 10 m gSSURGO soil, which is not in Earth Engine
   and would have meant uploading a statewide raster.
 - Sentinel-2 at 10 m, with the same spring window, March 1 to May 1, every year from 2018 to 2026.
-  For Question 1, a stratified sample of about 10,000 segments; for Question 2, every spill.
+  Zones for the whole state; Earth Engine gets a stratified sample of up to 2 million zones (about
+  400,000 segments) in 13 files, one per ecoregion and one for the spills. For Question 2, every spill.
 - Every pipeline segment gets one ID that stays the same at every distance.
 
 Recommended by the audit, for the team to confirm:
@@ -166,7 +167,7 @@ Recommended by the audit, for the team to confirm:
   appears in the results.
 - Teammates so far: Jayden (`jfloyd-27`) has ArcGIS Pro on Windows; Henry (`tinlongg`) uses an
   Apple Silicon Mac with 16 GB of memory.
-- Course dates: update presentations Oct 12 to 16, Midterm 2 Oct 30, GIS Day Nov 16, final
+- Course dates: update presentations Oct 12 to 16, Midterm 2 Oct 30, final
   presentations from Nov 23, hard deadline Dec 6.
 
 ## Proposal
