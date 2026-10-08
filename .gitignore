@@ -38,3 +38,4 @@ Thumbs.db
 # Local records and team documents: they stay in the shared Drive folder
 extract/jobs_log.csv
 docs/
+discovery/discovery_jobs.csv

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pipeline GeoAI</title>
+<title>Pipeline Discovery Lab</title>
 <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
 <script src="https://js.arcgis.com/4.31/"></script>
 <style>
@@ -38,12 +38,17 @@
   details { margin-top: 6px; } summary { font-size: 12px; color: var(--muted); cursor: pointer; }
   pre { font-size: 11.5px; background: var(--bg); padding: 8px; border-radius: 6px; overflow: auto; max-height: 220px; white-space: pre-wrap; }
   .err { color: var(--bad); }
+  .numbers { font-size: 12.5px; padding: 6px 10px; border-radius: 8px; margin: 0 0 10px; }
+  .numbers.ok { color: var(--ok); background: var(--okbg); } .numbers.bad { color: var(--bad); background: var(--badbg); }
+  .chart { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 0 0 12px; }
+  .chart h3 { font-size: 12.5px; margin: 0 0 4px; font-weight: 600; }
+  button.export { border: 1px solid var(--maroon); color: var(--maroon); background: #fff; border-radius: 8px; padding: 5px 12px; font: inherit; font-size: 13px; cursor: pointer; margin: 0 0 12px; }
   @media (max-width: 860px) { main { flex-direction: column; } #map { height: 50vh; flex: none; } aside { width: 100%; border-left: 0; border-top: 1px solid var(--line); } }
 </style>
 </head>
 <body>
 <header>
-  <h1>Pipeline GeoAI</h1><span class="sub">GEOG 392 Group 10 · Texas statewide sample · Sentinel-2 springs 2023–2025</span>
+  <h1>Pipeline Discovery Lab</h1><span class="sub">GEOG 392 Group 10 · Texas pipelines and spills · local agents</span>
   <span class="chip" id="status">connecting…</span>
 </header>
 <main>
@@ -56,18 +61,21 @@
       <div class="examples" id="examples"></div>
     </div>
     <div class="out" id="out">
-      <p class="note">A local model plans each answer and calls the project's tools. Every data answer is checked a second,
-      independent way. These are first results from three springs, not findings. Use the layer list (top right) for
-      aerial imagery.</p>
+      <p class="note">A local model plans each answer and calls the project's tools on two servers: the results and the
+      discovery tools (data catalog, spill narratives, look-alike places, live vegetation history). Every tool answer is
+      checked a second, independent way, and every number in the written answer is checked against the tool results.
+      These are first results, not findings. Use the layer list (top right) for aerial imagery.</p>
     </div>
   </aside>
 </main>
 <script>
 const EXAMPLES = [
   "Does the corridor effect depend on pipe diameter?",
-  "Which ecoregions show the biggest NDVI gap beside the pipe?",
-  "List the 5 sampled segments where the land beside the pipe is least green.",
-  "Show spill S006 against its comparison spots.",
+  "How far from the pipe does the NDVI gap reach?",
+  "What data do we have on land surface temperature, and where does it come from?",
+  "Find spill reports where a landowner or farmer found the oil.",
+  "Which segments look most like the spill sites in 2024?",
+  "Show the vegetation history of segment 147-000014-32-0-1.",
   "What does the statewide build leave out, and why?",
 ];
 const $ = (id) => document.getElementById(id);
@@ -132,12 +140,21 @@ require(["esri/Map", "esri/views/MapView", "esri/Basemap", "esri/layers/OpenStre
     if (data.error) { out.append(el("p", "err", data.error)); return; }
     out.append(el("p", "note", `“${question}”  ·  ${data.model} · ${data.seconds} s`));
     out.append(el("p", "answer", data.answer || "(no answer)"));
+    const n = data.numbers || { checked: 0, unsupported: [] };
+    out.append(el("p", "numbers " + (n.unsupported.length ? "bad" : "ok"), n.unsupported.length
+      ? `Number check: ${n.unsupported.join(", ")} did not come from any tool result. Treat ${n.unsupported.length === 1 ? "it" : "them"} with caution.`
+      : `Number check: all ${n.checked} number${n.checked === 1 ? "" : "s"} in the answer came from the tool results ✓${n.rewritten ? " (after one rewrite)" : ""}`));
+    for (const c of data.charts || []) out.append(chart(c));
+    const ex = el("button", "export", "Export brief (Markdown)");
+    ex.addEventListener("click", exportBrief); out.append(ex);
     const box = el("div", "steps"); box.append(el("h2", null, `How it was answered: ${data.steps.length} tool call${data.steps.length === 1 ? "" : "s"}`));
     for (const s of data.steps) {
       const card = el("div", "step"), top = el("div", "top");
-      top.append(el("code", null, s.tool), el("span", "note", `${s.seconds} s`));
-      const ok = s.check && s.check.startsWith("AGREES"), bad = s.check && s.check.startsWith("DISAGREES");
-      top.append(el("span", "badge " + (ok ? "ok" : bad ? "bad" : "none"), ok ? "checked ✓" : bad ? "check failed" : s.error ? "error" : "no check"));
+      top.append(el("code", null, s.tool), el("span", "note", `${s.server || ""} · ${s.seconds} s`));
+      const ok = s.check && s.check.startsWith("AGREES"), cross = s.check && s.check.startsWith("CROSS-CHECK"),
+            bad = s.check && (s.check.startsWith("DISAGREES") || s.check.startsWith("DIFFERS"));
+      top.append(el("span", "badge " + (ok || cross ? "ok" : bad ? "bad" : "none"),
+        ok ? "checked ✓" : cross ? "cross-checked" : bad ? "check failed" : s.error ? "error" : "no check"));
       card.append(top);
       if (Object.keys(s.args || {}).length) { const a = el("pre"); a.textContent = s.args.sql || JSON.stringify(s.args, null, 1); card.append(a); }
       const d = el("details"); d.append(el("summary", null, "tool result" + (s.check ? " and check" : "")));
@@ -146,6 +163,30 @@ require(["esri/Map", "esri/views/MapView", "esri/Basemap", "esri/layers/OpenStre
     }
     out.append(box);
     highlight(data.highlight || {});
+  }
+
+  function chart(c) {
+    // a small line chart drawn as SVG: one value per spring
+    const W = 400, H = 150, P = 28, box = el("div", "chart"); box.append(el("h3", null, c.title));
+    const xs = c.x, ys = c.y, lo = Math.min(...ys), hi = Math.max(...ys), span = (hi - lo) || 1;
+    const X = (i) => P + (i * (W - 2 * P)) / Math.max(xs.length - 1, 1), Y = (v) => H - P - ((v - lo) * (H - 2 * P)) / span;
+    const pts = ys.map((v, i) => `${X(i)},${Y(v)}`).join(" ");
+    const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${c.title}">
+      <polyline points="${pts}" fill="none" stroke="#500000" stroke-width="2"/>
+      ${ys.map((v, i) => `<circle cx="${X(i)}" cy="${Y(v)}" r="3.5" fill="#500000"><title>${xs[i]}: ${v} (${c.n[i]} clear images)</title></circle>`).join("")}
+      ${xs.map((x, i) => `<text x="${X(i)}" y="${H - 8}" font-size="10" text-anchor="middle" fill="#5f6368">${x}</text>`).join("")}
+      <text x="4" y="${Y(hi) + 4}" font-size="10" fill="#5f6368">${hi.toFixed(2)}</text>
+      <text x="4" y="${Y(lo) + 4}" font-size="10" fill="#5f6368">${lo.toFixed(2)}</text></svg>`;
+    const holder = el("div"); holder.innerHTML = svg; box.append(holder); return box;
+  }
+
+  async function exportBrief() {
+    const r = await fetch("/api/brief", { method: "POST" });
+    if (!r.ok) { alert((await r.json()).error || "No brief yet."); return; }
+    const blob = await r.blob(), a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (r.headers.get("Content-Disposition") || "").split("filename=")[1]?.replace(/"/g, "") || "discovery_brief.md";
+    a.click(); URL.revokeObjectURL(a.href);
   }
 
   async function go(question) {
@@ -164,7 +205,7 @@ require(["esri/Map", "esri/views/MapView", "esri/Basemap", "esri/layers/OpenStre
   $("q").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) go(); });
   for (const ex of EXAMPLES) { const b = el("button", null, ex); b.addEventListener("click", () => go(ex)); $("examples").append(b); }
   fetch("/api/status").then((r) => r.json()).then((s) => {
-    $("status").textContent = s.model_ready ? `${s.model} · ${s.tools.length} tools ready` : `model ${s.model} not found in Ollama`;
+    $("status").textContent = s.model_ready ? `${s.model} · ${s.tools.length} tools on ${Object.keys(s.servers || {}).length} servers` : `model ${s.model} not found in Ollama`;
   }).catch(() => { $("status").textContent = "app not reachable"; });
 });
 </script>
