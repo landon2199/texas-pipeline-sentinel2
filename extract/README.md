@@ -1,8 +1,31 @@
 # Extracting satellite values with the Earth Engine Python API
 
+## Part 2: the statewide runs (analysis plan v1.7)
+
+`part2.py` measures every zone image by image: Sentinel-2 surface reflectance with Cloud Score+ masks, NDVI, NDMI,
+SAVI, MNDWI, NDRE, S2REP and BSI, each zone's mean and pixel count split by NLCD land cover, on a 20 m grid for the
+corridor zones and 10 m for the spill zones. It also measures Landsat surface temperature, the gridMET drought indices
+and the fixed values (terrain, drainage, water share, soil). `run_springs.py` submits every job for each spring inside
+a monthly compute budget and keeps a log of them in `jobs_log.csv` (on this computer, not in the repository):
+
+```
+python extract/run_springs.py --sample projects/research-476723/assets/geog392/sample_v1_b50     --spills projects/research-476723/assets/geog392/spills_v1     --springs 2022 2021 2020 2019 2018 2026 2025 2023 2024 --budget 900
+python extract/run_springs.py --status
+```
+
+- `--budget` is the month's ceiling in EECU-hours: about 140 on the Community tier (150 a month) and up to 900 on the
+  Contributor tier (1,000 a month). The Contributor tier needs a billing account on the Cloud project; noncommercial
+  Earth Engine use is not charged.
+- Jobs already in the log are skipped, so the command can be rerun after a stop or a new month.
+- Exports go to the Drive folder `geog392_zone_stats`. Earth Engine finds Drive folders by name, so keep exactly one
+  folder with that name, in `projects/outputs`.
+- `run_part2.py` runs a single job, a cost test on a few segments, or one region.
+
+## Last year's method in Python
+
 `indices.py` is last year's Code Editor script rebuilt in Python, as the professor asked, and
 extended to Landsat so the record reaches back to 2000. `compare_with_2025.py` checks it against
-last year's numbers. The team's Colab notebooks import `indices.py`.
+last year's numbers. The archived practice notebooks (Oct 5) import `indices.py`.
 
 ## One-time setup
 

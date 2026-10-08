@@ -11,6 +11,11 @@ fix. Nothing in this folder is part of the new pipeline; read it, do not build o
   onto the buffer polygons, once per buffer distance. It needs `arcpy` and paths from Landon's computer.
 - `samples/`: the first 200 rows of each combined result table. Columns are `PipelineEcoID`,
   `NDVI` and `NDWI`.
+- `ee_assets_moved_2026-10-06.csv`: on 2026-10-06, last year's 33 Earth Engine assets (the 12 top-level
+  tables and the `100m`, `250m` and `500m` folders) moved into
+  `projects/research-476723/assets/geog391_gis_day_2025/`, keeping their names and subfolders, so the project
+  shows this year's work apart from last year's. Nothing was deleted. This file lists every old and new path. The
+  script above still uses the old paths; to rerun it, put `geog391_gis_day_2025/` after `assets/` in each asset ID.
 
 The full project, about 25 GB, is in Landon's Google Drive under `GEOG_392/projects/data/GEOG391_GIS_Day_2025_backup`: the ArcGIS Pro
 project and its 18 GB geodatabase, the per-ecoregion shapefiles and tables for each distance, and

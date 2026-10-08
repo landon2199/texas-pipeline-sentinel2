@@ -9,7 +9,7 @@ Commission's pipeline lines.
 | File | What it does |
 |---|---|
 | `phmsa_texas.py` | Reads PHMSA's accident table, keeps onshore Texas accidents with coordinates, measures the distance to the nearest Railroad Commission line, adds the ecoregion, and writes the summaries in `results/` |
-| `figure_proposal.py` | Draws Figure 1 of the revised proposal: the spills on a map of Texas pipelines, beside the ring design |
+| `figure_proposal.py` | Draws Figure 1 of the revised proposal: the spills on a map of this year's Railroad Commission lines, the ten 50 m bands of one real sampled segment, and one spill with its same-line comparison spots (all to scale) |
 | `results/` | Counts by year, commodity, part of the system, location type, ecoregion and cause, and a summary of how many accidents sit near a mapped line |
 
 PHMSA's site blocks scripts, so download the zip by hand: "Hazardous Liquid Accident Data - January

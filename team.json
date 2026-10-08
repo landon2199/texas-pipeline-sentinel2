@@ -3,7 +3,7 @@
   "team": "GEOG 392 Pipeline Monitoring",
   "size": 8,
   "target": "2026-12-06",
-  "notice": "The plan follows the revised proposal of Oct 4: four deliverables in six weeks. Group assignments are a draft until the team confirms them.",
+  "notice": "The plan follows the revised proposal and analysis plan v1.7 (Oct 7). Landon built the statewide zones and runs the satellite measurements; the groups check, analyze and show the results.",
   "meetings": [
     {
       "name": "Kickoff",
@@ -16,8 +16,8 @@
   "groups": [
     {
       "key": "A",
-      "name": "Data and zones",
-      "goal": "Deliverable 1, due Oct 23: the zone layer. Segments, rings and spill zones with ecoregion, land cover and soil.",
+      "name": "Zone checks",
+      "goal": "Deliverable 1, by Oct 23: the zone layer, checked. Landon built the statewide zones; Group A checks them in ArcGIS Pro and against aerial photos, and reviews what is left out.",
       "report": {
         "name": "1. Zone layer",
         "url": ""
@@ -32,15 +32,15 @@
           "status": "done"
         },
         {
-          "what": "Weeks 1-2: cut lines into 1 km segments with stable IDs and build the rings for one ecoregion",
+          "what": "Weeks 1-2: run the Group A - Zone checks notebook and look at the zones in ArcGIS Pro",
           "status": "todo"
         },
         {
-          "what": "Weeks 1-2: match the reported spills to segments and draw the spill and control circles",
+          "what": "Weeks 1-2: check that each reported spill is matched to the right line",
           "status": "todo"
         },
         {
-          "what": "Weeks 3-4: zones for the whole state, with ecoregion, land cover and soil texture; up to 2 million zones for Group B, in 13 files (one per ecoregion, one for the spills)",
+          "what": "Weeks 3-4: photo check of the 50 random segments; review the left-out table",
           "status": "todo"
         },
         {
@@ -51,10 +51,10 @@
     },
     {
       "key": "B",
-      "name": "Earth Engine",
-      "goal": "Deliverable 2, due Oct 29: the zone statistics. NDVI, NDWI, SAVI and land surface temperature for every zone and year.",
+      "name": "Spills",
+      "goal": "The spill study, by Nov 10: a photo check of about 20 spills before anyone sees the satellite numbers, then the before-and-after analysis against comparison spots on the same line. Landon runs Earth Engine.",
       "report": {
-        "name": "2. Zone statistics",
+        "name": "3. Results: spills",
         "url": ""
       },
       "tasks": [
@@ -67,50 +67,46 @@
           "status": "done"
         },
         {
-          "what": "Weeks 1-2: get everyone registered for Earth Engine and into one shared Cloud project",
+          "what": "Weeks 1-2: photo check of about 20 spills in aerial photos (Group B - Spills notebook)",
           "status": "todo"
         },
         {
-          "what": "Weeks 1-2: build the Colab extraction notebook and run the 10-spill before-and-after test",
+          "what": "Weeks 1-2: before-and-after check on 10 spills, after the photo check",
           "status": "todo"
         },
         {
-          "what": "Weeks 3-4: run every spring 2018-2026 for all zones, split by land cover, plus Landsat temperature",
+          "what": "Weeks 3-4: spill before-and-after with springs 2023-2025",
           "status": "todo"
         },
         {
-          "what": "Weeks 5-6: before-and-after tables for every spill, and layers for the web map",
+          "what": "Weeks 5-6: spill analysis on all nine springs; spill maps for the web map",
           "status": "todo"
         }
       ]
     },
     {
       "key": "C",
-      "name": "Analysis and maps",
-      "goal": "Deliverable 3, due Nov 6: the results. Ring comparisons, regressions, spill before-and-after and a hot spot map.",
+      "name": "Results, maps and dashboard",
+      "goal": "Deliverable 3, by Nov 10: the corridor results, charts and maps, and the dashboard layers.",
       "report": {
         "name": "3. Results",
         "url": ""
       },
       "tasks": [
         {
-          "what": "Weeks 1-2: write the analysis notebook (NumPy and pandas) on test data",
+          "what": "Weeks 1-2: run the Group C - Results and maps notebook; first charts and maps",
           "status": "todo"
         },
         {
-          "what": "Weeks 3-4: first ring-versus-comparison results from the early tables",
+          "what": "Weeks 3-4: distance profile and group comparisons (pipe size, ecoregion, commodity)",
           "status": "todo"
         },
         {
-          "what": "Weeks 5-6: linear regressions predicting land surface temperature from NDVI and NDWI",
+          "what": "Weeks 5-6: regressions and the hot spot map",
           "status": "todo"
         },
         {
-          "what": "Weeks 5-6: spill before-and-after against controls, and the hot spot map",
-          "status": "todo"
-        },
-        {
-          "what": "Weeks 5-6: maps and the ArcGIS Online web map",
+          "what": "Weeks 5-6: the ArcGIS Online web map and dashboard",
           "status": "todo"
         }
       ]
@@ -121,73 +117,73 @@
       "name": "Overlapping buffers cut each other: 16,303 buffers became 1.86 million pieces at 100 m",
       "where": "Ecoregion intersect step",
       "group": "A",
-      "status": "confirmed"
+      "status": "fixed"
     },
     {
       "name": "Distances simplified differently: 85% and 88% of pieces deleted at 250 and 500 m, none at 100 m",
       "where": "Simplify Polygon step",
       "group": "A",
-      "status": "confirmed"
+      "status": "fixed"
     },
     {
       "name": "100 m master table spelled IDs differently, so neither semi-arid ecoregion joined (48% of the 100 m area)",
       "where": "100 m table join",
       "group": "A",
-      "status": "confirmed"
+      "status": "fixed"
     },
     {
       "name": "342,254 Plains slivers never sent to Earth Engine: the shapefile hit the 2 GB limit",
       "where": "100 m Plains export",
       "group": "A",
-      "status": "confirmed"
+      "status": "fixed"
     },
     {
       "name": "IDs differ between 100, 250 and 500 m, so distances cannot be compared",
       "where": "Buffer layers",
       "group": "A",
-      "status": "confirmed"
+      "status": "fixed"
     },
     {
       "name": "No Railroad Commission field is a unique line ID",
       "where": "Pipeline lines",
       "group": "A",
-      "status": "confirmed"
+      "status": "fixed"
     },
     {
       "name": "Buffers and simplifying done in latitude and longitude, not an equal-area projection",
       "where": "Buffer and simplify steps",
       "group": "A",
-      "status": "confirmed"
+      "status": "fixed"
     },
     {
       "name": "Buffers are nested, not rings",
       "where": "Study design",
       "group": "A",
-      "status": "found"
+      "status": "fixed"
     },
     {
       "name": "Cloud mask keeps open water",
       "where": "Earth Engine script",
       "group": "B",
-      "status": "found"
+      "status": "fixed"
     },
     {
       "name": "Second index is MNDWI, a water index, not NDWI for plant moisture",
       "where": "Earth Engine script",
       "group": "B",
-      "status": "found"
+      "status": "fixed"
     },
     {
       "name": "No pixel or image count behind each value; 158,940 slivers came back blank",
       "where": "Earth Engine script",
       "group": "B",
-      "status": "confirmed"
+      "status": "fixed"
     },
     {
       "name": "Pixels read on a grid in degrees, not Sentinel-2's own grid",
       "where": "Earth Engine script",
       "group": "B",
-      "status": "found"
+      "status": "fixed"
     },
     {
       "name": "One season only, March to May 2025",
@@ -199,19 +195,19 @@
       "name": "No reference area to compare against",
       "where": "Study design",
       "group": "C",
-      "status": "found"
+      "status": "fixed"
     },
     {
       "name": "Map shows NDWI at 100 m but NDVI at 250 and 500 m",
       "where": "ArcGIS Pro map",
       "group": "C",
-      "status": "found"
+      "status": "fixed"
     },
     {
       "name": "No leak records were used, so leaks were inferred, never measured",
       "where": "Study design",
       "group": "C",
-      "status": "found"
+      "status": "fixed"
     }
   ],
   "members": [
@@ -219,7 +215,7 @@
       "github": "landon2199",
       "name": "Landon",
       "group": "Lead",
-      "task": "Lead: kickoff, update presentation, reviews, then the poster, report and presentation"
+      "task": "Lead: the statewide pipeline and satellite runs, reviews, the update presentation, then the poster, report and presentation"
     }
   ],
   "milestones": [
@@ -236,8 +232,16 @@
       "label": "Kickoff call, 2:10 pm"
     },
     {
+      "date": "2026-10-07",
+      "label": "Statewide zones built; springs 2023-2025 measured"
+    },
+    {
       "date": "2026-10-09",
-      "label": "Groups confirmed; everyone registered for Earth Engine"
+      "label": "Revised proposal submitted; groups confirmed"
+    },
+    {
+      "date": "2026-10-16",
+      "label": "Two-week milestone: statewide zones built, three springs measured, 10-spill check"
     },
     {
       "date": "2026-10-19",
@@ -245,24 +249,20 @@
       "label": "Update presentation week (moved from Oct 12-16)"
     },
     {
-      "date": "2026-10-16",
-      "label": "Two-week milestone: zones for one ecoregion, spills matched, 10-spill check"
-    },
-    {
       "date": "2026-10-23",
-      "label": "Deliverable 1: zone layer (Group A)"
+      "label": "Deliverable 1: zone layer, checked (Group A)"
     },
     {
       "date": "2026-10-29",
-      "label": "Deliverable 2: zone statistics (Group B)"
+      "label": "Deliverable 2: zone statistics, all nine springs (Landon)"
     },
     {
       "date": "2026-10-30",
       "label": "Midterm 2"
     },
     {
-      "date": "2026-11-06",
-      "label": "Deliverable 3: results (Group C)"
+      "date": "2026-11-10",
+      "label": "Deliverable 3: results (Groups B and C)"
     },
     {
       "date": "2026-11-13",

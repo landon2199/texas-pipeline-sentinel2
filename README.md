@@ -30,7 +30,13 @@ credentials or anything you would not want shared.
 | `data/status.json` | Who has checked in. Rebuilt automatically; do not edit |
 | `legacy-2025/` | Last year's Earth Engine script, notebook, sample tables, and a summary of what went wrong |
 | `audit/` | Scripts that checked last year's tables and geodatabase, their results, and the findings in `audit/README.md` |
-| `extract/` | The Earth Engine Python program (Sentinel-2, with Landsat as an option for earlier years) that computes vegetation and moisture for each polygon, and a check against last year |
+| `prep/` | Downloads the Railroad Commission's county pipeline files and builds the one statewide file |
+| `zones/` | Part 1: 1 km segments with stable IDs, the clean bands and comparison rings, the statewide sample and the spill zones, and the upload to Earth Engine |
+| `extract/` | Part 2: the Earth Engine measurements, image by image (`part2.py`, run spring by spring by `run_springs.py`), and last year's method rebuilt in Python with a check against last year (`indices.py`) |
+| `analysis/` | Part 3: the corridor results with sampling weights and intervals, the figures, and the tables for the agents and dashboard |
+| `agent/` | Part 4: the MCP server whose checked tools answer questions about the results, and the local "ask the map" dashboard |
+| `geoai/` | GeoAI prototypes, such as finding the cleared right-of-way in aerial photos with SAM 2 |
+| `docs/` | Sources of the team documents (analysis plan, START HERE, kickoff) and the scripts that build them and the team notebooks |
 | `leaks/` | Reported pipeline spills from PHMSA, matched to the Railroad Commission lines, and the proposal figure |
 | `requirements.txt` | The Python packages to install: `pip install -r requirements.txt` |
 
@@ -39,9 +45,9 @@ folder `GEOG_392/projects/data`. New outputs go in that Drive folder or in Earth
 
 ## How we work together
 
-1. **Get access.** Anyone can read the repository. To push branches, send Landon your GitHub
-   username to be added as a collaborator. For Earth Engine, send Landon the Google account you
-   use for Colab; Landon adds it to the team's Cloud project.
+1. **Get access.** Most of the work happens in the Colab notebooks in the shared Drive folder, and
+   Landon runs the Earth Engine measurements, so you need neither GitHub nor Earth Engine. To change
+   code, send Landon your GitHub username to be added as a collaborator.
 2. **Check in (optional).** Open a new issue with the **Check in** form. It puts you on the dashboard.
 3. **Take a task.** Tasks are listed in `team.json` and on the Plan page. Say in the team chat
    which one you are starting.

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pipeline GeoAI</title>
+<link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/light/main.css">
+<script src="https://js.arcgis.com/4.31/"></script>
+<style>
+  :root { --maroon: #500000; --ink: #1d1d1f; --muted: #5f6368; --line: #dadce0; --bg: #f6f6f4; --card: #ffffff;
+          --ok: #1e7b34; --okbg: #e6f4ea; --bad: #b3261e; --badbg: #fce8e6; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: "Segoe UI", system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+  header { height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 16px; background: var(--maroon); color: #fff; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  header .sub { font-size: 13px; opacity: .85; }
+  header .chip { margin-left: auto; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.16); }
+  main { display: flex; height: calc(100% - 52px); }
+  #map { flex: 1; min-width: 0; }
+  aside { width: 440px; max-width: 100%; display: flex; flex-direction: column; border-left: 1px solid var(--line); background: var(--card); }
+  .ask { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .ask label { font-size: 13px; color: var(--muted); }
+  textarea { width: 100%; height: 70px; margin: 6px 0 8px; padding: 8px 10px; font: inherit; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
+  button.go { background: var(--maroon); color: #fff; border: 0; border-radius: 8px; padding: 8px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+  button.go:disabled { opacity: .55; cursor: default; }
+  .examples { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .examples button { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
+  .out { flex: 1; overflow: auto; padding: 14px 16px; }
+  .note { font-size: 12px; color: var(--muted); }
+  .answer { font-size: 15px; line-height: 1.45; margin: 0 0 12px; white-space: pre-wrap; }
+  .steps h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 14px 0 6px; }
+  .step { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  .step .top { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+  .step code { font-family: Consolas, monospace; font-size: 12px; }
+  .badge { margin-left: auto; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .badge.ok { color: var(--ok); background: var(--okbg); } .badge.bad { color: var(--bad); background: var(--badbg); }
+  .badge.none { color: var(--muted); background: var(--bg); }
+  details { margin-top: 6px; } summary { font-size: 12px; color: var(--muted); cursor: pointer; }
+  pre { font-size: 11.5px; background: var(--bg); padding: 8px; border-radius: 6px; overflow: auto; max-height: 220px; white-space: pre-wrap; }
+  .err { color: var(--bad); }
+  @media (max-width: 860px) { main { flex-direction: column; } #map { height: 50vh; flex: none; } aside { width: 100%; border-left: 0; border-top: 1px solid var(--line); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Pipeline GeoAI</h1><span class="sub">GEOG 392 Group 10 · Texas statewide sample · Sentinel-2 springs 2023–2025</span>
+  <span class="chip" id="status">connecting…</span>
+</header>
+<main>
+  <div id="map" aria-label="Map of sampled pipeline segments and reported spills in Texas"></div>
+  <aside>
+    <div class="ask">
+      <label for="q">Ask the map</label>
+      <textarea id="q" placeholder="For example: does the corridor effect depend on pipe diameter?"></textarea>
+      <button class="go" id="go">Ask</button>
+      <div class="examples" id="examples"></div>
+    </div>
+    <div class="out" id="out">
+      <p class="note">A local model plans each answer and calls the project's tools. Every data answer is checked a second,
+      independent way. These are first results from three springs, not findings. Use the layer list (top right) for
+      aerial imagery.</p>
+    </div>
+  </aside>
+</main>
+<script>
+const EXAMPLES = [
+  "Does the corridor effect depend on pipe diameter?",
+  "Which ecoregions show the biggest NDVI gap beside the pipe?",
+  "List the 5 sampled segments where the land beside the pipe is least green.",
+  "Show spill S006 against its comparison spots.",
+  "What does the statewide build leave out, and why?",
+];
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+require(["esri/Map", "esri/views/MapView", "esri/Basemap", "esri/layers/OpenStreetMapLayer", "esri/layers/GeoJSONLayer",
+         "esri/layers/TileLayer", "esri/layers/ImageryLayer", "esri/widgets/Legend", "esri/widgets/BasemapToggle",
+         "esri/widgets/LayerList", "esri/widgets/Expand"],
+         (Map, MapView, Basemap, OSM, GeoJSONLayer, TileLayer, ImageryLayer, Legend, BasemapToggle, LayerList, Expand) => {
+  const segments = new GeoJSONLayer({
+    url: "/api/layers/segments.geojson", title: "Sampled segments: 0-50 m NDVI gap (springs 2023-2025)", outFields: ["*"],
+    renderer: { type: "simple", symbol: { type: "simple-marker", size: 7, outline: { color: [60, 60, 60, 0.6], width: 0.4 } },
+      visualVariables: [{ type: "color", field: "NDVI_diff_0_50", stops: [
+        { value: -0.04, color: "#8c510a", label: "less green than normal land" }, { value: -0.015, color: "#d8b365" },
+        { value: 0, color: "#f5f5f5", label: "same" }, { value: 0.015, color: "#5ab4ac" },
+        { value: 0.04, color: "#01665e", label: "greener than normal land" }] }] },
+    popupTemplate: { title: "Segment {segment_id}", content: [{ type: "fields", fieldInfos: [
+      { fieldName: "commodity", label: "Commodity" }, { fieldName: "service", label: "Service" },
+      { fieldName: "diameter_in", label: "Diameter (in)" }, { fieldName: "OPER_NM", label: "Operator" },
+      { fieldName: "status", label: "Status" }, { fieldName: "location_accuracy", label: "Mapped location accuracy" },
+      { fieldName: "ecoregion", label: "Ecoregion" }, { fieldName: "springs_measured", label: "Springs measured" },
+      { fieldName: "NDVI_diff_0_50", label: "NDVI gap, 0-50 m ring vs. clean land 500-1,000 m away", format: { places: 4 } },
+      { fieldName: "NDRE_gap_0_50", label: "NDRE gap (chlorophyll)", format: { places: 4 } },
+      { fieldName: "NDMI_gap_0_50", label: "NDMI gap (plant moisture)", format: { places: 4 } }] }] },
+  });
+  const spills = new GeoJSONLayer({
+    url: "/api/layers/spills.geojson", title: "Reported spills (PHMSA, since mid-2018)", outFields: ["*"],
+    renderer: { type: "simple", symbol: { type: "simple-marker", style: "diamond", size: 13, color: "#542788", outline: { color: "#fff", width: 1.2 } } },
+    popupTemplate: { title: "Spill {spill_id}", content: "{date}: {barrels} barrels of {commodity}<br>Cause: {cause}<br>{ecoregion}" },
+  });
+  // High-resolution imagery: USGS NAIP aerial photos (about 0.6 m) as a switchable layer, and Esri World Imagery as a basemap.
+  const naip = new ImageryLayer({ url: "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer",
+                                  title: "NAIP aerial photos (USGS, about 0.6 m)", visible: false });
+  const imagery = new Basemap({ baseLayers: [new TileLayer({ url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer" })],
+                                title: "Imagery", id: "world-imagery",
+                                thumbnailUrl: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/5/12/7" });
+  const map = new Map({ basemap: new Basemap({ baseLayers: [new OSM()], title: "Streets" }), layers: [naip, segments, spills] });
+  const view = new MapView({ container: "map", map, center: [-99.3, 31.3], zoom: 6 });
+  view.ui.add(new Legend({ view }), "bottom-left");
+  view.ui.add(new BasemapToggle({ view, nextBasemap: imagery }), "bottom-right");
+  view.ui.add(new Expand({ view, content: new LayerList({ view }), expandTooltip: "Layers and imagery", expanded: false }), "top-right");
+
+  let handles = [];
+  async function highlight(h) {
+    handles.forEach((x) => x.remove()); handles = [];
+    const quoted = (ids) => ids.map((i) => `'${i.replace(/'/g, "")}'`).join(",");
+    const targets = [];
+    for (const [layer, field, ids] of [[segments, "segment_id", h.segments], [spills, "spill_id", h.spills]]) {
+      if (!ids || !ids.length) continue;
+      const lv = await view.whenLayerView(layer);
+      const q = layer.createQuery(); q.where = `${field} IN (${quoted(ids)})`; q.returnGeometry = true;
+      const res = await layer.queryFeatures(q);
+      if (!res.features.length) continue;
+      handles.push(lv.highlight(res.features));
+      targets.push(...res.features);
+    }
+    if (targets.length) view.goTo(targets.length === 1 ? { target: targets, zoom: 12 } : targets, { duration: 800 });
+  }
+
+  function render(data, question) {
+    const out = $("out"); out.replaceChildren();
+    if (data.error) { out.append(el("p", "err", data.error)); return; }
+    out.append(el("p", "note", `“${question}”  ·  ${data.model} · ${data.seconds} s`));
+    out.append(el("p", "answer", data.answer || "(no answer)"));
+    const box = el("div", "steps"); box.append(el("h2", null, `How it was answered: ${data.steps.length} tool call${data.steps.length === 1 ? "" : "s"}`));
+    for (const s of data.steps) {
+      const card = el("div", "step"), top = el("div", "top");
+      top.append(el("code", null, s.tool), el("span", "note", `${s.seconds} s`));
+      const ok = s.check && s.check.startsWith("AGREES"), bad = s.check && s.check.startsWith("DISAGREES");
+      top.append(el("span", "badge " + (ok ? "ok" : bad ? "bad" : "none"), ok ? "checked ✓" : bad ? "check failed" : s.error ? "error" : "no check"));
+      card.append(top);
+      if (Object.keys(s.args || {}).length) { const a = el("pre"); a.textContent = s.args.sql || JSON.stringify(s.args, null, 1); card.append(a); }
+      const d = el("details"); d.append(el("summary", null, "tool result" + (s.check ? " and check" : "")));
+      const p = el("pre"); p.textContent = s.result + (s.check ? "\n\nCHECK: " + s.check : ""); d.append(p); card.append(d);
+      box.append(card);
+    }
+    out.append(box);
+    highlight(data.highlight || {});
+  }
+
+  async function go(question) {
+    question = (question || $("q").value).trim(); if (!question) return;
+    $("q").value = question; $("go").disabled = true;
+    const t0 = Date.now(), out = $("out"); out.replaceChildren(el("p", "note", "Thinking… 0 s"));
+    const tick = setInterval(() => { out.firstChild.textContent = `Thinking… ${Math.round((Date.now() - t0) / 1000)} s (the local model plans, then calls the tools)`; }, 1000);
+    try {
+      const r = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question }) });
+      render(await r.json(), question);
+    } catch (e) { out.replaceChildren(el("p", "err", "The app did not answer: " + e)); }
+    finally { clearInterval(tick); $("go").disabled = false; }
+  }
+
+  $("go").addEventListener("click", () => go());
+  $("q").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) go(); });
+  for (const ex of EXAMPLES) { const b = el("button", null, ex); b.addEventListener("click", () => go(ex)); $("examples").append(b); }
+  fetch("/api/status").then((r) => r.json()).then((s) => {
+    $("status").textContent = s.model_ready ? `${s.model} · ${s.tools.length} tools ready` : `model ${s.model} not found in Ollama`;
+  }).catch(() => { $("status").textContent = "app not reachable"; });
+});
+</script>
+</body>
+</html>

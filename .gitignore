@@ -34,3 +34,7 @@ venv/
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# Local records and team documents: they stay in the shared Drive folder
+extract/jobs_log.csv
+docs/

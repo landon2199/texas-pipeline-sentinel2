@@ -1,4 +1,8 @@
-# Handoff: where the project stands (Oct 4, 2026)
+# Handoff: where the project stood on Oct 4, 2026
+
+> **Superseded on Oct 7, 2026.** The statewide zones are built and springs 2023-2025 are measured. The current plan is
+> analysis plan v1.7 (`docs/analysis_plan.html`), and the dashboard shows the groups and dates. This note is kept for
+> the record.
 
 Notes for picking this project up, first written at the end of the cloud planning session and
 updated after the first local session. Delete or update this file once it is out of date.
