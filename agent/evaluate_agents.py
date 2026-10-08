@@ -117,7 +117,8 @@ def main(a):
         used = [s["tool"] for s in res.get("steps", [])]
         got = res.get("answer", "")
         ok_tool = any(x in used for x in tools)
-        ok_answer = all(matches(got, e) for e in expected)
+        # with nothing specific to check, an answer counts only if it came from the right tool
+        ok_answer = all(matches(got, e) for e in expected) if expected else ok_tool
         ok_numbers = not res.get("numbers", {}).get("unsupported")
         rows.append({"k": k, "question": question, "tools_used": " ".join(used), "tool_ok": ok_tool, "answer_ok": ok_answer,
                      "numbers_ok": ok_numbers, "unsupported": " ".join(res.get("numbers", {}).get("unsupported", [])),

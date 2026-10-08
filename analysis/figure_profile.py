@@ -57,7 +57,8 @@ def main(a):
         axes[0].plot([], [], "o", color=MAROON, ms=3.5, label="ten 50 m bands")
         axes[0].add_patch(Rectangle((0, 0), 0, 0, facecolor="#d9d9d9", label="four old rings (95% interval)"))
         axes[0].legend(fontsize=8, frameon=False, loc="center right")
-    fig.suptitle(f"{a.label or 'Spring ' + a.spring}, {n:,} sampled segments, same land cover: index beside the pipe minus ground "
+    name = a.label or "Spring " + a.spring
+    fig.suptitle(f"{name[0].upper() + name[1:]}, {n:,} sampled segments, same land cover: index beside the pipe minus ground "
                  f"500-1,000 m from any pipeline", fontsize=10, x=0.01, ha="left")
     fig.tight_layout()
     out = a.bands / f"figure_profile_{(a.label or a.spring).replace(' ', '_')}.png"
