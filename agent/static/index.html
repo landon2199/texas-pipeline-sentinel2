@@ -86,7 +86,7 @@ require(["esri/Map", "esri/views/MapView", "esri/Basemap", "esri/layers/OpenStre
          "esri/widgets/LayerList", "esri/widgets/Expand"],
          (Map, MapView, Basemap, OSM, GeoJSONLayer, TileLayer, ImageryLayer, Legend, BasemapToggle, LayerList, Expand) => {
   const segments = new GeoJSONLayer({
-    url: "/api/layers/segments.geojson", title: "Sampled segments: 0-50 m NDVI gap (springs 2023-2025)", outFields: ["*"],
+    url: "/api/layers/segments.geojson", title: "Sampled segments: 0-50 m NDVI gap (springs 2018-2026)", outFields: ["*"],
     renderer: { type: "simple", symbol: { type: "simple-marker", size: 7, outline: { color: [60, 60, 60, 0.6], width: 0.4 } },
       visualVariables: [{ type: "color", field: "NDVI_diff_0_50", stops: [
         { value: -0.04, color: "#8c510a", label: "less green than normal land" }, { value: -0.015, color: "#d8b365" },

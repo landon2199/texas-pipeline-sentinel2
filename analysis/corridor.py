@@ -21,6 +21,7 @@ Usage: python corridor.py --results <folder of per-image CSVs> --pattern "*per_i
                           --out <folder> [--indices NDVI NDMI NDRE BSI] [--min-pixels 20] [--boot 500]
 """
 import argparse
+import re
 from pathlib import Path
 
 import numpy as np
@@ -69,11 +70,19 @@ def one_image_per_pass(d: pd.DataFrame, unit: str, count: str = "NDVI_count", pa
     return d.merge(best[key + ["image"]], on=key + ["image"])
 
 
-def load_results(folder: Path, pattern: str) -> pd.DataFrame:
-    files = sorted(folder.glob(pattern))
+def read_file(f: Path, indices=None) -> pd.DataFrame:
+    """One export, with only the columns the analysis uses (all seven indices when indices is None)."""
+    keep = {"zone_id", "landcover", "date", "image", "orbit"}
+    for i in (INDICES_ALL if indices is None else sorted(set(indices) | {"NDVI"})):
+        keep |= {f"{i}_mean", f"{i}_count"}
+    return pd.read_csv(f, usecols=lambda c: c in keep, dtype={"landcover": "int16"})
+
+
+def load_results(folder: Path, pattern: str, indices=None, files=None) -> pd.DataFrame:
+    files = files or sorted(folder.glob(pattern))
     if not files:
         raise SystemExit(f"no files match {pattern} in {folder}")
-    d = pd.concat([pd.read_csv(f) for f in files], ignore_index=True)
+    d = pd.concat([read_file(f, indices) for f in files], ignore_index=True)
     d[["segment_id", "ring"]] = d["zone_id"].str.rsplit("_r", n=1, expand=True)
     d["year"] = d["date"].str[:4].astype(int)
     d["doy"] = pd.to_datetime(d["date"]).dt.dayofyear
@@ -139,12 +148,26 @@ def summarize(v, w, strata, boot, rng):
 
 
 def main(a):
-    d = load_results(a.results, a.pattern)
-    if a.pool:
-        d = pool_rings(d, a.pool)
-    rings = rings_in(d)
-    tables = [t for t in (paired(d, idx, a.min_pixels, rings) for idx in a.indices) if len(t)]
+    # One spring at a time: every pass lies inside one spring, so this gives the same per-segment springs as loading
+    # everything at once, in a fraction of the memory. A spring's files (pieces) are always loaded together.
+    files = sorted(a.results.glob(a.pattern))
+    if not files:
+        raise SystemExit(f"no files match {a.pattern} in {a.results}")
+    springs = {}
+    for f in files:
+        springs.setdefault(re.search(r"_(\d{4})(?:_|\.)", f.name).group(1), []).append(f)
+    tables = []
+    for spring, group in sorted(springs.items()):
+        d = load_results(a.results, a.pattern, a.indices, files=group)
+        if a.pool:
+            d = pool_rings(d, a.pool)
+        rings = rings_in(d)
+        tables += [t for t in (paired(d, idx, a.min_pixels, rings) for idx in a.indices) if len(t)]
+        del d
     seg = pd.concat(tables, ignore_index=True)
+    dupes = seg.duplicated(["segment_id", "year", "ring", "index"]).sum()
+    if dupes:
+        raise SystemExit(f"{dupes} segment springs appear twice: check the file names give each spring's year")
     sample = pd.read_csv(a.sample / "sample_segments.csv")
     attrs = ["segment_id", "stratum", "weight"] + [g for g in GROUPS if g in sample.columns]
     seg = seg.merge(sample[attrs], on="segment_id", how="left")

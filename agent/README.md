@@ -9,7 +9,7 @@ results. The models, tools and data run on this computer.
 
 **The data.** A stratified sample of 3,499 one-kilometer pipeline segments, weighted to stand for the 296,191 segments
 that have a clean comparison ring, and 82 reported spills with their comparison spots. They are measured in Sentinel-2
-imagery image by image, and springs 2023–2025 are done. The tables come from `analysis/agent_tables.py` and live in
+imagery image by image, and all nine springs, 2018–2026, are measured. The tables come from `analysis/agent_tables.py` and live in
 `outputs/agent/` (Parquet, plus a points GeoPackage for ArcGIS). These are first results, not findings.
 
 ## Results tools (`geog392_mcp_server.py`)
@@ -22,7 +22,8 @@ imagery image by image, and springs 2023–2025 are done. The tables come from `
 | `distance_profile` | How far from the pipe the effect reaches: the weighted gap in each 50 m band to 500 m, with a plain reading | NumPy recomputes every band's weighted median |
 | `segment` | One segment: labels, place, fixed values, its gaps by ring and spring, spring drought | GDAL re-reads it from the sample file; the gap is recomputed from its springs |
 | `hot_spots` | ArcGIS Pro's Optimized Hot Spot Analysis (Getis-Ord Gi*) on the segment midpoints | GDAL re-reads ArcGIS Pro's output and recounts it |
-| `spill_timeline` | One spill against its same-line or regional comparison spots, spring by spring, with the BACI effect | DuckDB SQL recomputes the effect from the raw spill table |
+| `spill_timeline` | One spill against its matched same-line comparison spots, spring by spring, with its before-and-after effect (`analysis/spills.py`) | DuckDB SQL recomputes the effect from the spring table |
+| `spill_summary` | The spill effect across all spills: mean and median with a bootstrap interval, a Wilcoxon test, fake-spill permutation p-values and the date-shift check | NumPy and SciPy recompute the mean, median and test from the per-spill effects |
 | `left_out` | What the statewide build covers and leaves out, with reasons | The parts must add up; measured km must match the zone files |
 | `verify` | Recomputes the last answer and says whether it agrees | |
 

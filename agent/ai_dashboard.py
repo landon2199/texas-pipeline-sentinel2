@@ -73,7 +73,8 @@ Rules:
 - Statewide or group answers: corridor_summary (by statewide, ecoregion, commodity_group, service, diameter_class,
   status or location_accuracy), with its 95% interval and its "Reading it" line. How far from the pipe: distance_profile.
 - One segment: segment (IDs look like 001-000025-35-0-8). Lists and rankings: query_zones (call list_tables first if
-  you need column names). One spill against its comparison spots: spill_timeline (IDs look like S006).
+  you need column names). One spill against its matched comparison spots: spill_timeline (IDs look like S006). Across all
+  spills, with fake-spill p-values: spill_summary; repeat its "Reading it" line.
 - What data exists, where it came from, what it feeds: search_catalog, then describe_dataset.
 - The spill narratives: search_spill_reports, then spill_report for one. Use its filters for facts (how_found,
   cleanup, soil_removed, reached_water, since_year) and the query for meaning. Its first line says how many reports match

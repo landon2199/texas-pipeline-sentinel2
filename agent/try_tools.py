@@ -33,7 +33,8 @@ async def main(skip_hot_spots: bool):
             await call("corridor_summary", {"index": "NDVI", "ring": "0-50 m", "by": "diameter_class"})
             await call("segment", {"segment_id": "001-000025-35-0-8"})
             await call("distance_profile", {"index": "NDVI"})
-            await call("spill_timeline", {"spill_id": "S006", "index": "NDVI", "radius_m": 50})
+            await call("spill_timeline", {"spill_id": "S024", "index": "NDVI"})
+            await call("spill_summary", {"index": "NDVI"})
             await call("left_out")
             if not skip_hot_spots:
                 await call("hot_spots", {"field": "NDVI_diff_0_50"})

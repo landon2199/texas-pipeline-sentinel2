@@ -16,9 +16,14 @@ Reads the outputs of Parts 1-3 and writes, in outputs/agent/:
   segment_points.gpkg      the segments as midpoints (EPSG:6579) with the gap fields, for ArcGIS hot spots and the map
   band_profile.parquet     the statewide distance profile: weighted gap in every 50 m band (plan v1.6), with intervals
   band_springs.parquet     one row per segment, spring, 50 m band and index (corridor.py on the ten-band sample)
+  spill_effects.parquet    per spill and index: the matched before-and-after effect (analysis/spills.py), for the
+                           strict matching and the broader one
+  spill_baci.parquet       per spill, index and spring: the spill circle minus its matched same-line spots, same pass
+  spill_matches.parquet    which spots were matched to which spill
+  spill_summary.parquet    the effect across all spills, with intervals, tests and fake-spill p-values
 A gap is ring minus the segment's own clean 500-1,000 m comparison ring (negative = less than normal land).
 
-Usage: python agent_tables.py [--corridor outputs/results/corridor_sample_v1_3springs]
+Usage: python agent_tables.py [--corridor <four-ring results>] [--bands <ten-band results>] [--zones sample_v1_b50]
 """
 import argparse
 import sys
@@ -41,7 +46,7 @@ SPILL_INDICES = ["NDVI", "NDMI", "NDRE", "BSI"]
 CIRCLES = {50: ["0-25", "25-50"], 100: ["0-25", "25-50", "50-100"]}
 
 
-def segments_table(corridor: Path) -> pd.DataFrame:
+def segments_table(corridor: Path, zones: str) -> pd.DataFrame:
     seg = pyogrio.read_dataframe(SAMPLE / "sample.gpkg", layer="segments")
     mid = seg.geometry.interpolate(0.5, normalized=True)
     ll = mid.to_crs(4326)
@@ -54,7 +59,7 @@ def segments_table(corridor: Path) -> pd.DataFrame:
     wide = gaps.pivot(index="segment_id", columns="index", values="same").add_suffix("_gap_0_50")
     wide_all = gaps.pivot(index="segment_id", columns="index", values="all").add_suffix("_gap_0_50_all_ground")
     springs = gaps.groupby("segment_id")["springs"].max().rename("springs_measured")
-    fixed = pd.read_csv(STATS / "sample_v1_and_spills_v1_fixed.csv")
+    fixed = pd.read_csv(STATS / f"{zones}_and_spills_v1_fixed.csv")
     fixed = fixed[fixed["zone_id"].str.endswith("_r0-50")].assign(segment_id=lambda d: d["zone_id"].str[:-6])
     fixed = fixed.drop(columns="zone_id").rename(columns=lambda c: c.replace("_mean", "").replace("_mode", ""))
     out = (pd.DataFrame(seg.drop(columns="geometry")).merge(wide, on="segment_id", how="left")
@@ -93,9 +98,9 @@ def spill_springs_table() -> pd.DataFrame:
     return pd.concat(rows, ignore_index=True)
 
 
-def lst_table() -> pd.DataFrame:
+def lst_table(zones: str) -> pd.DataFrame:
     rows = []
-    for f in sorted(STATS.glob("sample_v1_and_spills_v1_lst_*.csv")):
+    for f in sorted(STATS.glob(f"{zones}_and_spills_v1_lst_*.csv")):
         d = pd.read_csv(f)
         d["unit"] = d["zone_id"].str.rsplit("_r", n=1).str[0]           # the segment or spill site
         d = one_image_per_pass(d, "unit", count="LST_count", pass_key=("date", "path"))
@@ -113,7 +118,7 @@ def lst_table() -> pd.DataFrame:
 
 def main(a):
     OUT.mkdir(parents=True, exist_ok=True)
-    seg, mid = segments_table(a.corridor)
+    seg, mid = segments_table(a.corridor, a.zones)
     seg.to_parquet(OUT / "segments.parquet", index=False)
     pts = seg[["segment_id", "line_uid", "OPER_NM", "commodity", "commodity_group", "service", "diameter_in", "diameter_class",
                "status", "location_accuracy", "ecoregion", "county_fips", "weight", "springs_measured", "NDVI_diff_0_50",
@@ -140,13 +145,21 @@ def main(a):
 
     print("spill springs:")
     spill_springs_table().to_parquet(OUT / "spill_springs.parquet", index=False)
-    lst_table().to_parquet(OUT / "lst_springs.parquet", index=False)
-    dr = pd.concat([pd.read_csv(f) for f in sorted(STATS.glob("sample_v1_and_spills_v1_drought_*.csv"))], ignore_index=True)
+    lst_table(a.zones).to_parquet(OUT / "lst_springs.parquet", index=False)
+    dr = pd.concat([pd.read_csv(f) for f in sorted(STATS.glob(f"{a.zones}_and_spills_v1_drought_*.csv"))], ignore_index=True)
     dr.to_parquet(OUT / "drought.parquet", index=False)
     if (a.bands / "statewide.csv").exists():         # the ten-band design (plan v1.6)
         b = pd.read_csv(a.bands / "statewide.csv")
         b[b["scope"] == "statewide"].to_parquet(OUT / "band_profile.parquet", index=False)
         pd.read_csv(a.bands / "segment_spring.csv").to_parquet(OUT / "band_springs.parquet", index=False)
+    spill_parts = {"spill_effects": "effects.csv", "spill_baci": "spill_springs.csv", "spill_matches": "matches.csv",
+                   "spill_summary": "summary.csv"}
+    runs = {"strict": a.spills, "broader": a.spills.with_name(a.spills.name + "_relaxed")}
+    if a.spills.exists():
+        for table, name in spill_parts.items():
+            frames = [pd.read_csv(folder / name).assign(matching=label) for label, folder in runs.items()
+                      if (folder / name).exists()]
+            pd.concat(frames, ignore_index=True).to_parquet(OUT / f"{table}.parquet", index=False)
     for f in sorted(OUT.glob("*.parquet")):
         print(f"  {f.name}: {len(pd.read_parquet(f)):,} rows")
     print(f"wrote {OUT}")
@@ -154,6 +167,10 @@ def main(a):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--corridor", type=Path, default=P / "outputs" / "results" / "corridor_sample_v1_3springs")
-    ap.add_argument("--bands", type=Path, default=P / "outputs" / "results" / "corridor_sample_v1_b50")
+    ap.add_argument("--corridor", type=Path, default=P / "outputs" / "results" / "corridor_sample_v1_9springs_pooled",
+                    help="the four-ring results (rebuilt from the ten bands since all nine springs are in)")
+    ap.add_argument("--bands", type=Path, default=P / "outputs" / "results" / "corridor_sample_v1_b50_9springs")
+    ap.add_argument("--zones", default="sample_v1_b50", help="the zone set the temperature, drought and fixed values are for")
+    ap.add_argument("--spills", type=Path, default=P / "outputs" / "results" / "spills_9springs",
+                    help="analysis/spills.py's output (the _relaxed folder beside it is the broader matching)")
     main(ap.parse_args())

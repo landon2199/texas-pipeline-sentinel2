@@ -26,6 +26,7 @@ def bars(ax, t, labels, title, horizontal=False):
         ax.barh(pos, y, xerr=err, color=MAROON, alpha=0.85, ecolor="#333", capsize=2)
         ax.set_yticks(list(pos), [f"{g} (n={int(n)})" for g, n in zip(t.index, t["segments"])], fontsize=8)
         ax.axvline(0, color="#888", lw=0.8)
+        ax.xaxis.set_major_locator(plt.MaxNLocator(5))          # fewer ticks, so the numbers do not run together
         ax.invert_yaxis()
     else:
         ax.bar(pos, y, yerr=err, color=MAROON, alpha=0.85, ecolor="#333", capsize=2)

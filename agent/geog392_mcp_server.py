@@ -12,7 +12,8 @@ Tools
   distance_profile  how far from the pipe the effect reaches: the weighted gap in every 50 m band to 500 m
   segment           everything about one segment: labels, place, fixed values, its gaps spring by spring
   hot_spots         ArcGIS Pro's Optimized Hot Spot Analysis on the segment midpoints (ArcPy)
-  spill_timeline    one spill against its comparison spots, spring by spring (before-after-control-impact)
+  spill_timeline    one spill against its matched comparison spots, spring by spring (before-after-control-impact)
+  spill_summary     the spill effect across all spills, with intervals, tests and fake-spill p-values
   left_out          what the statewide build covers and leaves out, with the reasons
   verify            recompute the last answer independently and say whether it agrees
 
@@ -46,7 +47,7 @@ Commission pipeline was cut into 1 km segments; each segment has rings beside th
 250-500 m) and a clean comparison ring 500-1,000 m away that has no pipeline within 500 m. A stratified random sample
 of 3,499 segments (weights stand for all 296,191 segments with a clean comparison ring) and 82 reported spills with
 their comparison spots are measured in Sentinel-2 imagery, image by image, every spring (March-April). Springs
-2023-2025 are measured so far; 2018-2022 and 2026 follow. A gap is ring minus its own comparison ring, like-for-like
+2018-2026 (all nine) are measured. A gap is ring minus its own comparison ring, like-for-like
 land cover; negative means less than normal land. Since plan v1.6 the sample is also measured in ten 50 m bands out to 500 m (distance_profile). These are first results, not findings. Prefer the tools over
 guessing, report numbers with their 95% intervals, and call verify after any answer you report. Project rules: every
 spring is always measured; anything left out is counted and stated."""
@@ -79,6 +80,17 @@ DESCRIPTIONS = {
     "band_profile": "the statewide distance profile from the ten-band design: weighted gap in every 50 m band from 0 to "
                     "500 m, with 95% intervals (springs, ring, index, measure, segments, weighted_median, lo95, hi95)",
     "band_springs": "one row per segment, spring, 50 m band (ring) and index: diff_same_lc, diff_all, passes",
+    "spill_effects": "per spill, index and matching ('strict' or 'broader'): E1 (first spring after minus the springs "
+                     "before, spill minus its matched same-line spots), E_all, springs_before, springs_after, spots, "
+                     "barrels, commodity_group, cause, ecoregion, hand_m, slope_deg",
+    "spill_baci": "per spill, index, matching and spring (year): d, the spill's 50 m circle minus the mean of its matched "
+                  "same-line spots in the same passes (median over the spring), passes, status (before/during/after), "
+                  "years_from_spill",
+    "spill_matches": "which comparison spots were matched to each spill: spill_id, site_id, kind ('same line' or "
+                     "'regional'), matching",
+    "spill_summary": "the effect across all spills, per index, matching and subset ('all' or '50 barrels or more (H2)'): "
+                     "n, mean_E1, lo95, hi95, median_E1, wilcoxon_p, perm_p_same_line, perm_p_regional, "
+                     "date_shift_mean_E1, date_shift_n",
 }
 
 _TABLES: dict[str, pd.DataFrame] | None = None
@@ -283,65 +295,76 @@ def hot_spots(field: str = "NDVI_diff_0_50") -> str:
     return f"Optimized Hot Spot Analysis on {field} ({sum(bins.values())} segments)\n" + "\n".join(rows) + f"\nOutput: {output}"
 
 
-def _spring_status(year: int, spill_date: pd.Timestamp) -> str:
-    start, end = pd.Timestamp(f"{year}-03-01"), pd.Timestamp(f"{year}-05-01")
-    if end < spill_date:
-        return "before"
-    if start > spill_date:
-        return "after"
-    return "during"
-
-
-def _timeline(spill_id: str, index: str, radius_m: int, controls: str) -> tuple[pd.DataFrame, dict]:
-    sites = tables()["spill_sites"]
-    mine = sites[sites["spill_id"] == spill_id]
-    if mine.empty:
-        raise ValueError(f"No spill {spill_id}. Spills: {', '.join(sorted(sites['spill_id'].unique()))}")
-    ctl_kind = "candidate" if controls == "same line" else "regional"
-    sp = tables()["spill_springs"]
-    v = sp[(sp["index"] == index) & (sp["radius_m"] == radius_m) & sp["site_id"].isin(mine["site_id"])]
-    v = v.merge(mine[["site_id", "site"]], on="site_id")
-    spill_date = pd.Timestamp(mine["spill_date"].iloc[0])
-    spill_v = v[v["site"] == "spill"].set_index("year")["value"]
-    ctl = v[v["site"] == ctl_kind].groupby("year")["value"]
-    t = pd.DataFrame({"spill": spill_v, "controls_mean": ctl.mean(), "controls_n": ctl.size()}).sort_index()
-    t["spill_minus_controls"] = t["spill"] - t["controls_mean"]
-    t.insert(0, "spring", [_spring_status(int(y), spill_date) for y in t.index])
-    d = t["spill_minus_controls"]
-    b, a = d[t["spring"] == "before"].mean(), d[t["spring"] == "after"].mean()
-    s = tables()["spills"]
-    info = s[s["spill_id"] == spill_id].iloc[0]
-    meta = {"spill_date": spill_date.date().isoformat(), "barrels": float(info["barrels"]), "commodity": info["commodity"],
-            "cause": info["cause"], "controls": ctl_kind, "n_before": int((t["spring"] == "before").sum()),
-            "n_after": int((t["spring"] == "after").sum()),
-            "baci": None if np.isnan(a) or np.isnan(b) else float(a - b)}
-    return t.reset_index(names="year"), meta
+SPILL_INDICES = ("NDVI", "NDMI", "NDRE", "BSI")
 
 
 @server.tool()
-def spill_timeline(spill_id: str, index: str = "NDVI", radius_m: int = 50, controls: str = "same line") -> str:
-    """One spill against its comparison spots, spring by spring (before-after-control-impact, BACI).
-
-    index: NDVI, NDMI, NDRE or BSI. radius_m: 50 or 100. controls: 'same line' (spots every 0.5 km along the same
-    pipeline) or 'regional' (spots on similar lines in the same ecoregion). Each measured spring is labeled before,
-    during or after the spill; the BACI effect is the change in (spill minus controls) from before to after. A negative
-    NDVI effect means the spill site lost more green than its controls. Springs 2023-2025 are measured so far.
-    """
-    if index not in ("NDVI", "NDMI", "NDRE", "BSI"):
+def spill_timeline(spill_id: str, index: str = "NDVI", matching: str = "strict") -> str:
+    """One spill against its matched comparison spots on the same pipeline, spring by spring (before-after-control-
+    impact, from analysis/spills.py). index: NDVI, NDMI, NDRE or BSI. matching: 'strict' (same land cover class and soil
+    texture, similar terrain, no other spill within 1 km) or 'broader' (same land cover group, any soil). Each spring's
+    value d is the spill's 50 m circle minus the mean of its matched spots in the same satellite passes (median over
+    the spring), labeled before, during or after the spill. E1 is the first spring after minus the mean of the springs
+    before; a negative NDVI E1 means the spill site lost more green than its comparison spots."""
+    if index not in SPILL_INDICES:
         raise ValueError("index must be NDVI, NDMI, NDRE or BSI")
-    if controls not in ("same line", "regional"):
-        raise ValueError("controls must be 'same line' or 'regional'")
-    t, meta = _timeline(spill_id, index, int(radius_m), controls)
+    if matching not in ("strict", "broader"):
+        raise ValueError("matching must be 'strict' or 'broader'")
+    T = tables()
+    info = T["spills"][T["spills"]["spill_id"] == spill_id]
+    if info.empty:
+        raise ValueError(f"No spill {spill_id}. Spills: {', '.join(sorted(T['spills']['spill_id']))}")
+    i = info.iloc[0]
     LAST.clear()
-    LAST.update(tool="spill_timeline", spill_id=spill_id, index=index, radius_m=int(radius_m), controls=meta["controls"],
-                result=meta["baci"])
-    effect = (f"no measured spring {'before' if meta['n_before'] == 0 else 'after'} the spill yet, so no before-after "
-              f"effect (2018-2022 and 2026 are measured in November)" if meta["baci"] is None else
-              f"BACI effect: {meta['baci']:+.4f} {index} ({meta['n_before']} springs before, {meta['n_after']} after; the "
-              f"spring of the spill is shown but counted in neither)")
-    head = (f"Spill {spill_id}: {meta['spill_date']}, {meta['barrels']:,.0f} barrels of {meta['commodity']} ({meta['cause']}); "
-            f"{radius_m} m circles; controls: {controls}\n{effect}\n")
-    return head + t.to_csv(index=False, float_format="%.4f")
+    m = T["spill_matches"]
+    spots = m[(m["spill_id"] == spill_id) & (m["kind"] == "same line") & (m["matching"] == matching)]["site_id"].tolist()
+    e = T["spill_effects"]
+    e = e[(e["spill_id"] == spill_id) & (e["index"] == index) & (e["matching"] == matching)]
+    head = f"Spill {spill_id}: {i['date']}, {i['barrels']:,.0f} barrels of {i['commodity']} ({i['cause']}). "
+    if e.empty or not spots:
+        LAST.update(tool="spill_timeline", spill_id=spill_id, index=index, matching=matching, result=None)
+        return head + (f"No same-line spot passed the {matching} matching rules, so it has no matched comparison"
+                       + (" (try matching='broader')." if matching == "strict" else "."))
+    e = e.iloc[0]
+    b = T["spill_baci"]
+    tl = b[(b["spill_id"] == spill_id) & (b["index"] == index) & (b["matching"] == matching)].sort_values("year")
+    E1 = None if pd.isna(e["E1"]) else float(e["E1"])
+    LAST.update(tool="spill_timeline", spill_id=spill_id, index=index, matching=matching, result=E1)
+    effect = (f"Effect E1 (first spring after minus the springs before): {E1:+.4f} {index}; all springs after minus "
+              f"before: {e['E_all']:+.4f}." if E1 is not None else "No measured spring right after the spill, so no E1.")
+    return (head + f"{len(spots)} matched same-line spots ({matching} matching).\n{effect}\n"
+            + tl[["year", "status", "years_from_spill", "d", "passes"]].to_csv(index=False, float_format="%.4f"))
+
+
+@server.tool()
+def spill_summary(index: str = "NDVI", matching: str = "strict") -> str:
+    """The spill effect across all spills: the mean and median E1 (first spring after minus the springs before, spill
+    minus its matched same-line spots) with a 95% bootstrap interval, a Wilcoxon signed-rank test, and the fake-spill
+    permutation p-values: matched same-line spots treated as if they had spilled, and regional spots treated as if they
+    spilled on the real dates. Also the check with each spill's date moved two years earlier, which should show nothing.
+    For all spills and for spills of 50 barrels or more (H2). matching: 'strict' or 'broader'."""
+    if index not in SPILL_INDICES:
+        raise ValueError("index must be NDVI, NDMI, NDRE or BSI")
+    s = tables()["spill_summary"]
+    s = s[(s["index"] == index) & (s["matching"] == matching)]
+    LAST.clear()
+    LAST.update(tool="spill_summary", index=index, matching=matching,
+                result={r["spills"]: (float(r["mean_E1"]), float(r["median_E1"]), float(r["wilcoxon_p"])) for _, r in s.iterrows()})
+    if s.empty:
+        return f"No spill summary for {index} with {matching} matching."
+    allr = s[s["spills"] == "all"].iloc[0]
+    p_same = float(str(allr["perm_p_same_line"]).split()[0]) if str(allr["perm_p_same_line"]) != "n/a" else 1.0
+    clear = allr["hi95"] < 0 and p_same < 0.05
+    reading = (f"Reading it: across {int(allr['n'])} spills the spill sites lost more {index} than their matched "
+               f"comparison spots in the first spring after the spill; the interval is entirely below zero and fake spills "
+               f"rarely look this bad (p = {allr['perm_p_same_line']}). With the dates moved two years earlier the "
+               f"effect is about zero ({allr['date_shift_mean_E1']:+.4f})." if clear else
+               f"Reading it: across {int(allr['n'])} spills the interval includes zero or fake spills look as bad, so "
+               f"there is no clear {index} effect.")
+    cols = ["spills", "n", "mean_E1", "lo95", "hi95", "median_E1", "wilcoxon_p", "perm_p_same_line", "perm_p_regional",
+            "date_shift_mean_E1", "date_shift_n"]
+    return (f"{index} effect across spills ({matching} matching), first results:\n"
+            + s[cols].to_csv(index=False, float_format="%.4f") + "\n" + reading)
 
 
 def _coverage() -> dict:
@@ -450,18 +473,26 @@ def verify() -> str:
         ok = recount == LAST["result"]
         return f"{'AGREES' if ok else 'DISAGREES'}: GDAL recount of ArcGIS Pro's output {recount} vs reported {LAST['result']}."
     if tool == "spill_timeline":
-        kind = LAST["controls"]
-        sql = """
-        WITH s AS (SELECT site_id, site, CAST(spill_date AS DATE) AS spill FROM spill_sites WHERE spill_id = $id),
-             v AS (SELECT p.year, s.site, s.spill, p.value FROM spill_springs p JOIN s USING (site_id)
-                   WHERE p."index" = $idx AND p.radius_m = $r),
-             y AS (SELECT year, AVG(CASE WHEN site = 'spill' THEN value END) - AVG(CASE WHEN site = $kind THEN value END) AS d,
-                          MAKE_DATE(year, 3, 1) AS a, MAKE_DATE(year, 5, 1) AS e, MIN(spill) AS spill FROM v GROUP BY year)
-        SELECT AVG(CASE WHEN a > spill THEN d END) - AVG(CASE WHEN e < spill THEN d END) FROM y"""
-        other = duck().execute(sql, {"id": LAST["spill_id"], "idx": LAST["index"], "r": LAST["radius_m"], "kind": kind}).fetchone()[0]
+        sql = """SELECT MAX(CASE WHEN status = 'after' AND years_from_spill = 1 THEN d END)
+                        - AVG(CASE WHEN status = 'before' THEN d END)
+                 FROM spill_baci WHERE spill_id = $id AND "index" = $idx AND matching = $m"""
+        other = duck().execute(sql, {"id": LAST["spill_id"], "idx": LAST["index"], "m": LAST["matching"]}).fetchone()[0]
         mine = LAST["result"]
         ok = (mine is None and other is None) or (mine is not None and other is not None and abs(mine - other) < 1e-9)
-        return f"{'AGREES' if ok else 'DISAGREES'}: SQL recomputation {other} vs reported {mine}."
+        return f"{'AGREES' if ok else 'DISAGREES'}: DuckDB SQL recomputed E1 from the spring table: {other} vs reported {mine}."
+    if tool == "spill_summary":
+        from scipy import stats
+        e = tables()["spill_effects"]
+        e = e[(e["index"] == LAST["index"]) & (e["matching"] == LAST["matching"])].dropna(subset=["E1"])
+        checks = []
+        for name, sub in [("all", e), ("50 barrels or more (H2)", e[e["barrels"] >= 50])]:
+            if name in LAST["result"] and len(sub) >= 3:
+                mean, med, p = LAST["result"][name]
+                again = (float(np.mean(sub["E1"])), float(np.median(sub["E1"])), float(stats.wilcoxon(sub["E1"]).pvalue))
+                checks.append(np.allclose(again, (mean, med, p), atol=1e-9))
+        ok = bool(checks) and all(checks)
+        return (f"{'AGREES' if ok else 'DISAGREES'}: NumPy and SciPy recomputed the mean, median and Wilcoxon p from the "
+                f"per-spill effects ({sum(checks)} of {len(checks)} subsets match).")
     if tool == "left_out":
         c = LAST["result"]
         adds_up = abs(c["by_reason"]["km"].sum() - c["total_km"]) < 1e-6 * c["total_km"]

@@ -69,6 +69,11 @@ def bank(t):
         ("Where do the spill locations come from?", ["search_catalog", "describe_dataset"], ["PHMSA"]),
         ("Show the vegetation history of segment 147-000014-32-0-1.", ["vegetation_history"], []),
     ]
+    ss = pd.read_parquet(AGENT / "spill_summary.parquet") if (AGENT / "spill_summary.parquet").exists() else None
+    if ss is not None:
+        row = ss[(ss["index"] == "NDVI") & (ss["matching"] == "strict") & (ss["spills"] == "all")].iloc[0]
+        q.append(("Across all the spills, did vegetation at the spill sites drop after the spill compared with nearby spots?",
+                  ["spill_summary"], [float(row["mean_E1"])]))
     r = t["spill_reports"]
     if r is not None:
         q += [("How many right-of-way spill reports say contaminated soil was removed?", ["search_spill_reports"],
