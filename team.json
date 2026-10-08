@@ -4,15 +4,7 @@
   "size": 8,
   "target": "2026-12-06",
   "notice": "The plan follows the revised proposal and analysis plan v1.7 (Oct 7). Landon built the statewide zones and runs the satellite measurements; the groups check, analyze and show the results.",
-  "meetings": [
-    {
-      "name": "Kickoff",
-      "poll": "",
-      "when": "",
-      "where": "Zoom or Discord",
-      "done": false
-    }
-  ],
+  "meetings": [],
   "groups": [
     {
       "key": "A",
