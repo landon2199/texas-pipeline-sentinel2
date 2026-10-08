@@ -33,6 +33,8 @@ async def main(live: bool):
                                                 "soil_removed": "yes"})
             await call("spill_report", {"spill_or_report_id": "S024"})
             await call("similar_places", {"place_id": "S024", "year": 2024, "k": 5})
+            await call("similar_places", {"place_id": "147-000014-32-0-1", "year": 2024, "k": 5})
+            await call("places_like_spills", {"year": 2024, "k": 10})
             if live:
                 await call("vegetation_history", {"place": "S024", "index": "NDVI", "first_spring": 2019, "last_spring": 2025})
 

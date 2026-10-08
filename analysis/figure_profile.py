@@ -57,10 +57,10 @@ def main(a):
         axes[0].plot([], [], "o", color=MAROON, ms=3.5, label="ten 50 m bands")
         axes[0].add_patch(Rectangle((0, 0), 0, 0, facecolor="#d9d9d9", label="four old rings (95% interval)"))
         axes[0].legend(fontsize=8, frameon=False, loc="center right")
-    fig.suptitle(f"Spring {a.spring}, {n:,} sampled segments, same land cover: index beside the pipe minus ground "
+    fig.suptitle(f"{a.label or 'Spring ' + a.spring}, {n:,} sampled segments, same land cover: index beside the pipe minus ground "
                  f"500-1,000 m from any pipeline", fontsize=10, x=0.01, ha="left")
     fig.tight_layout()
-    out = a.bands / f"figure_profile_{a.spring}.png"
+    out = a.bands / f"figure_profile_{(a.label or a.spring).replace(' ', '_')}.png"
     fig.savefig(out, dpi=200)
     print(f"wrote {out}")
 
@@ -71,4 +71,5 @@ if __name__ == "__main__":
     ap.add_argument("--rings", type=Path)
     ap.add_argument("--spring", default="2024")
     ap.add_argument("--indices", nargs="+", default=["NDVI", "NDRE", "NDMI"])
+    ap.add_argument("--label", help='how to name the springs in the title and file, e.g. "springs 2018-2026"')
     main(ap.parse_args())

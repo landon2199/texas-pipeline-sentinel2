@@ -205,7 +205,8 @@ def distance_profile(index: str = "NDVI", measure: str = "same land cover") -> s
     """How far from the pipe does the corridor effect reach? The weighted gap in every 50 m band from 0 to 500 m.
 
     index: NDVI, NDRE or NDMI. measure: 'same land cover' (like-for-like) or 'all ground'. The "Reading it" line names
-    the outermost band whose 95% interval is entirely below zero, so the agent does not have to judge intervals.
+    how far the unbroken run of bands below zero reaches from the pipe, and any isolated band farther out, so the
+    agent does not have to judge intervals.
     """
     if "band_profile" not in tables():
         raise ValueError("the ten-band profile is not built yet (analysis/agent_tables.py --bands ...)")
@@ -215,13 +216,17 @@ def distance_profile(index: str = "NDVI", measure: str = "same land cover") -> s
         raise ValueError(f"no profile for index={index}, measure={measure}")
     rows["inner_m"] = rows["ring"].str.split("-").str[0].astype(int)
     rows = rows.sort_values("inner_m")[["ring", "segments", "weighted_median", "lo95", "hi95"]]
-    below = rows[rows["hi95"] < 0]
     LAST.clear()
     LAST.update(tool="distance_profile", index=index, measure=measure, result=rows)
-    reach = (f"the gap is clearly below zero out to the {below.iloc[-1]['ring']} band" if len(below) else
-             "no band's interval is entirely below zero")
-    first_zero = rows[(rows["lo95"] <= 0) & (rows["hi95"] >= 0)]
-    fades = f"; the first band whose interval includes zero is {first_zero.iloc[0]['ring']}" if len(first_zero) else ""
+    is_below = (rows["hi95"] < 0).tolist()
+    run = next((k for k, b in enumerate(is_below) if not b), len(is_below))     # bands below zero, counted from the pipe
+    reach = (f"the gap is clearly below zero in every band from the pipe out to the {rows.iloc[run - 1]['ring']} band"
+             if run else "the band beside the pipe is not clearly below zero")
+    fades = f"; the first band whose interval includes zero is {rows.iloc[run]['ring']}" if run < len(rows) else ""
+    isolated = [r for r, b in zip(rows["ring"].iloc[run:], is_below[run:]) if b]
+    if isolated:
+        fades += (f"; farther out, {', '.join(isolated)} {'is' if len(isolated) == 1 else 'are'} below zero on its own, "
+                  "which may be chance among ten bands")
     springs = sorted(tables()["band_springs"]["year"].unique()) if "band_springs" in tables() else []
     return (f"{index} gap by distance from the pipe ({measure}), ten 50 m bands, springs {springs}.\n"
             + rows.to_csv(index=False, float_format="%.5f") + f"\nReading it: {reach}{fades}.\n")

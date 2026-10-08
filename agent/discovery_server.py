@@ -177,6 +177,8 @@ def search_spill_reports(query: str, k: int = 8, how_found: str = "", cleanup: s
                                      reached_water=reached_water, since_year=since_year).items() if v}
     head = (f"{len(c)} of {len(r)} reports match the filters {filters}" if filters else
             f"No filters: all {len(r)} reports were searched (this is not a count of matches)")
+    head = (f"These are PHMSA's {len(r)} right-of-way spill reports in Texas since 2010; {int(r['spill_id'].notna().sum())} "
+            f"of them are the spills in our study (since mid-2018, matched to a mapped line). " + head)
     return (f"{head}. The {len(top)} closest in meaning to '{query}', best first:\n" + out[cols].to_csv(index=False)
             + "\nspill_id is blank when the spill is before mid-2018 or not matched to a mapped line. Use spill_report for one.")
 
@@ -373,7 +375,8 @@ def verify() -> str:
                      & y["kind"].isin(["segment band", "spill site"])].iloc[0]["place_id"]
             kind = "segment band" if LAST["among"] == "segments" else "spill site"
             q = ("SELECT b.place_id, list_cosine_similarity(a.embedding, b.embedding) AS s FROM y a, y b "
-                 f"WHERE a.place_id = '{seed}' AND b.kind = '{kind}' AND b.place_id <> a.place_id ORDER BY s DESC LIMIT {len(LAST['result'])}")
+                 f"WHERE a.place_id = '{seed}' AND a.kind IN ('segment band', 'spill site') AND b.kind = '{kind}' "
+                 f"AND b.place_id <> a.place_id ORDER BY s DESC LIMIT {len(LAST['result'])}")
         else:
             q = ("SELECT a.place_id, max(list_cosine_similarity(a.embedding, b.embedding)) AS s FROM y a, y b "
                  f"WHERE a.kind = 'segment band' AND b.kind = 'spill site' GROUP BY a.place_id ORDER BY s DESC LIMIT {len(LAST['result'])}")

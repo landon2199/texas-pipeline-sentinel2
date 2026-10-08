@@ -76,13 +76,16 @@ def bank(t):
                   ["spill_summary"], [float(row["mean_E1"])]))
     r = t["spill_reports"]
     if r is not None:
+        dug = int(r["cleanup_actions"].fillna("").str.contains("excavated soil").sum())
         q += [("How many right-of-way spill reports say contaminated soil was removed?", ["search_spill_reports"],
-               [(int((r["soil_removed"] == "yes").sum()), 0)]),
+               [[(int((r["soil_removed"] == "yes").sum()), 0), (dug, 0)]]),        # soil removed, or excavated soil
               ("Find spill reports where a landowner or farmer found the oil.", ["search_spill_reports"], [])]
     return q
 
 
 def matches(answer: str, expected) -> bool:
+    if isinstance(expected, list):                 # accepted alternatives: any one is right
+        return any(matches(answer, e) for e in expected)
     if isinstance(expected, str):
         return expected.lower().replace("-", " ") in answer.lower().replace("-", " ").replace("–", " ")
     value, places = expected if isinstance(expected, tuple) else (expected, 4)

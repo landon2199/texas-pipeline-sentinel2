@@ -103,6 +103,25 @@ ITEMS = [
          produced_by="discovery/embeddings.py", inputs="ee_satellite_embedding, ee_assets",
          description="The mean Satellite Embedding of every segment's 0-50 m band and comparison ring and of every spill "
                      "site and comparison spot, each year, for finding places that look like spill sites."),
+    dict(id="corridor_results", kind="result", title="Corridor results, all nine springs (four rings rebuilt from the bands)",
+         path="outputs/results/corridor_sample_v1_9springs_pooled", provider="Group 10", license="team", years="2018-2026",
+         produced_by="analysis/corridor.py", inputs="ee_assets, sample_v1",
+         description="The weighted statewide gap between each ring beside the pipe and its clean comparison ring, with "
+                     "95% bootstrap intervals, statewide and by ecoregion, commodity, diameter, status and mapped accuracy."),
+    dict(id="distance_profile_results", kind="result", title="Distance profile, ten 50 m bands, all nine springs",
+         path="outputs/results/corridor_sample_v1_b50_9springs", provider="Group 10", license="team", years="2018-2026",
+         produced_by="analysis/corridor.py", inputs="ee_assets, sample_v1",
+         description="How far from the pipe the vegetation gap reaches: the weighted gap in every 50 m band out to 500 m."),
+    dict(id="spill_results", kind="result", title="Spill before-and-after results with fake-spill tests, all nine springs",
+         path="outputs/results/spills_9springs", provider="Group 10", license="team", years="2018-2026",
+         produced_by="analysis/spills.py", inputs="spill_zones, ee_assets",
+         description="Each spill against matched comparison spots on the same line, spring by spring, with the effect "
+                     "across spills, Wilcoxon tests, permutation p-values from fake spills, and a broader-matching check."),
+    dict(id="place_embeddings_table", kind="discovery table", title="Satellite embeddings joined for look-alike search",
+         path="outputs/discovery/place_embeddings.parquet", provider="Group 10", license="team", years="2017-2025",
+         produced_by="discovery/place_embeddings.py", inputs="place_embeddings",
+         description="One row per place and year (segment bands, comparison rings, spill sites, comparison spots) with "
+                     "its 64-value Satellite Embedding, searched by similar_places and places_like_spills."),
     dict(id="analysis_plan", kind="document", title="Analysis plan v1.7", path="proposal/GEOG392_Analysis_Plan_Group10.pdf",
          provider="Group 10", license="team", years="2026", produced_by="docs/build_docs.ps1", inputs="",
          description="The questions, data, methods, tests and decisions, written before the statewide results, with every "
