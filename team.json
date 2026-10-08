@@ -7,8 +7,8 @@
   "meetings": [
     {
       "name": "Kickoff",
-      "poll": "https://app.rallly.co/invite/2UTIFsPaGh1O",
-      "when": "Wednesday Oct 7 at 2:10 pm, during Landon's office hours",
+      "poll": "",
+      "when": "",
       "where": "Zoom or Discord",
       "done": false
     }
@@ -226,10 +226,6 @@
     {
       "date": "2026-10-04",
       "label": "Revised proposal drafted"
-    },
-    {
-      "date": "2026-10-07",
-      "label": "Kickoff call, 2:10 pm"
     },
     {
       "date": "2026-10-07",

@@ -40,8 +40,9 @@ credentials or anything you would not want shared.
 | `leaks/` | Reported pipeline spills from PHMSA, matched to the Railroad Commission lines, and the proposal figure |
 | `requirements.txt` | The Python packages to install: `pip install -r requirements.txt` |
 
-Large data does not go in this repository. Last year's full project is in the shared Google Drive
-folder `GEOG_392/projects/data`. New outputs go in that Drive folder or in Earth Engine assets.
+Large data does not go in this repository. Last year's full project is kept outside the shared folder, in
+Landon's Drive; what went wrong with it is summarized in `audit/README.md` and `legacy-2025/README.md`. New
+outputs go in the shared Drive folder `GEOG_392/projects` or in Earth Engine assets.
 
 ## How we work together
 
