@@ -6,8 +6,8 @@
     over this year's Railroad Commission lines and the EPA Level III ecoregions (data/statewide).
 (b) The ten 50 m bands and the comparison ring of one sampled segment exactly as built (outputs/zones/sample_v1,
     layer rings_b50), to scale, with the ground the cleaning rule leaves out.
-(c) One matched spill with its rings and its same-line comparison spots (outputs/zones/statewide/spills_statewide.gpkg),
-    to scale.
+(c) One matched spill with its rings and its candidate comparison spots on the same line
+    (outputs/zones/statewide/spills_statewide.gpkg), to scale.
 Writes outputs/figures/figure1_proposal.png in the projects folder.
 """
 import argparse
@@ -183,7 +183,8 @@ def main():
 
     cx = fig.add_axes([0.5, 0.0, 0.5, 0.19])
     spill, spots = panel_spill(cx, a.spill)
-    cx.set_title(f"c. One spill and its {spots} same-line comparison spots", fontsize=7.5, color=INK, loc="left", pad=1)
+    # the candidates: spills.py keeps up to 3 per side that match the spill's land cover, soil and terrain (D18)
+    cx.set_title(f"c. One spill and its {spots} candidate spots on the same line", fontsize=7.5, color=INK, loc="left", pad=1)
 
     fig.savefig(a.out, dpi=300, facecolor="white")
     print(f"wrote {a.out} | (a) {recent} spills since {S2_START}, {early} earlier | (b) {a.segment}: {s['commodity']}, "

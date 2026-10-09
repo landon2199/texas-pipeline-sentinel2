@@ -13,7 +13,7 @@
       "label": "the final report"
     }
   ],
-  "notice": "The plan follows the revised proposal (Oct 9) and analysis plan v1.7. Landon built the statewide zones and runs the satellite measurements; the groups check, analyze and show the results. We present at TxGIS Day at Texas A&M, Nov 16-20.",
+  "notice": "The plan follows the revised proposal (Oct 9) and analysis plan v1.7. Landon built the statewide zones and runs the satellite measurements; the groups check, analyze and show the results. We present at TxGIS Day at Texas A&M, Nov 16-20, as our final presentation; entries are due about Nov 9.",
   "meetings": [],
   "groups": [
     {
@@ -54,7 +54,7 @@
     {
       "key": "B",
       "name": "Spills",
-      "goal": "The spill study, by Nov 10: a photo check of about 20 spills before anyone sees the satellite numbers, then the before-and-after analysis against comparison spots on the same line. Landon runs Earth Engine.",
+      "goal": "The spill study, by Nov 6: a photo check of about 20 spills before anyone sees the satellite numbers, then the before-and-after analysis against comparison spots on the same line. Landon runs Earth Engine.",
       "report": {
         "name": "3. Results: spills",
         "url": ""
@@ -85,7 +85,7 @@
     {
       "key": "C",
       "name": "Results, maps and dashboard",
-      "goal": "Deliverable 3, by Nov 10: the corridor results, charts and maps, and the dashboard layers.",
+      "goal": "Deliverable 3, by Nov 6: the corridor results, charts and maps, and the dashboard layers.",
       "report": {
         "name": "3. Results",
         "url": ""
@@ -213,7 +213,7 @@
       "github": "landon2199",
       "name": "Landon",
       "group": "Lead",
-      "task": "Lead: the statewide pipeline and satellite runs, reviews, the kickoff and the update presentation, then the GIS Day talk and poster, the report and the final presentation"
+      "task": "Lead: the statewide pipeline and satellite runs, reviews, the kickoff and the update presentation, then the GIS Day talk and poster (our final presentation) and the report"
     }
   ],
   "milestones": [
@@ -260,21 +260,21 @@
       "label": "Midterm 2"
     },
     {
-      "date": "2026-11-10",
+      "date": "2026-11-06",
       "label": "Deliverable 3: results (Groups B and C)"
     },
     {
-      "date": "2026-11-13",
-      "label": "Deliverable 4: GIS Day web map and poster (everyone); work frozen"
+      "date": "2026-11-09",
+      "label": "Deliverable 4: TxGIS Day poster and talk abstract submitted, web map done (everyone); the 2026 deadline isn't posted yet, 2025's was Nov 10"
     },
     {
       "date": "2026-11-16",
       "end": "2026-11-20",
-      "label": "TxGIS Day at Texas A&M: our poster and talk"
+      "label": "TxGIS Day at Texas A&M: our poster and talk, our final presentation"
     },
     {
       "date": "2026-11-23",
-      "label": "Final presentations (Nov 23, Nov 30 and Dec 2)"
+      "label": "Class final presentations (Nov 23, Nov 30 and Dec 2); we present at TxGIS Day instead"
     },
     {
       "date": "2026-12-06",
