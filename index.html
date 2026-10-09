@@ -54,8 +54,11 @@
 <script>
 topBar('home', '');
 loadData('').then(({ team, people, today, iso }) => {
-  const daysLeft = Math.max(0, Math.round((new Date(team.target + 'T12:00:00') - today) / 864e5));
-  document.getElementById('headline').innerHTML = `<em>${daysLeft} days</em> to the final report, ${day(team.target)}`;
+  // Count down to the next goal in team.json's `countdowns` (TxGIS Day, then the final report).
+  const goals = team.countdowns ?? [{ date: team.target, label: 'the final report' }];
+  const goal = goals.find((g) => g.date >= iso) ?? goals[goals.length - 1];
+  const daysLeft = Math.max(0, Math.round((new Date(goal.date + 'T12:00:00') - today) / 864e5));
+  document.getElementById('headline').innerHTML = `<em>${daysLeft} days</em> to ${esc(goal.label)}, ${day(goal.date)}`;
   document.getElementById('joinLink').href = `https://github.com/${repoSlug()}/issues/new?template=join.yml`;
   document.getElementById('count').textContent = `${people.length}${team.size ? ' of ' + team.size : ''} checked in`;
 

@@ -3,7 +3,17 @@
   "team": "GEOG 392 Pipeline Monitoring",
   "size": 8,
   "target": "2026-12-06",
-  "notice": "The plan follows the revised proposal and analysis plan v1.7 (Oct 7). Landon built the statewide zones and runs the satellite measurements; the groups check, analyze and show the results.",
+  "countdowns": [
+    {
+      "date": "2026-11-16",
+      "label": "TxGIS Day"
+    },
+    {
+      "date": "2026-12-06",
+      "label": "the final report"
+    }
+  ],
+  "notice": "The plan follows the revised proposal (Oct 9) and analysis plan v1.7. Landon built the statewide zones and runs the satellite measurements; the groups check, analyze and show the results. We present at TxGIS Day at Texas A&M, Nov 16-20.",
   "meetings": [],
   "groups": [
     {
@@ -36,7 +46,7 @@
           "status": "todo"
         },
         {
-          "what": "Weeks 5-6: check the results and write the poster's data and methods sections",
+          "what": "Weeks 5-6: check the results and write the GIS Day poster's data and methods sections",
           "status": "todo"
         }
       ]
@@ -63,15 +73,11 @@
           "status": "todo"
         },
         {
-          "what": "Weeks 1-2: before-and-after check on 10 spills, after the photo check",
+          "what": "Weeks 3-4: spill before-and-after on all nine springs, after the photo check",
           "status": "todo"
         },
         {
-          "what": "Weeks 3-4: spill before-and-after with springs 2023-2025",
-          "status": "todo"
-        },
-        {
-          "what": "Weeks 5-6: spill analysis on all nine springs; spill maps for the web map",
+          "what": "Weeks 5-6: spill analysis; spill maps for the GIS Day web map and poster",
           "status": "todo"
         }
       ]
@@ -98,7 +104,7 @@
           "status": "todo"
         },
         {
-          "what": "Weeks 5-6: the ArcGIS Online web map and dashboard",
+          "what": "Weeks 5-6: GIS Day maps, the ArcGIS Online web map and the dashboard",
           "status": "todo"
         }
       ]
@@ -207,7 +213,7 @@
       "github": "landon2199",
       "name": "Landon",
       "group": "Lead",
-      "task": "Lead: the statewide pipeline and satellite runs, reviews, the update presentation, then the poster, report and presentation"
+      "task": "Lead: the statewide pipeline and satellite runs, reviews, the kickoff and the update presentation, then the GIS Day talk and poster, the report and the final presentation"
     }
   ],
   "milestones": [
@@ -232,8 +238,9 @@
       "label": "Revised proposal submitted; groups confirmed"
     },
     {
-      "date": "2026-10-16",
-      "label": "Two-week milestone: statewide zones built, three springs measured, 10-spill check"
+      "date": "2026-10-12",
+      "end": "2026-10-16",
+      "label": "Kickoff call (time to be set)"
     },
     {
       "date": "2026-10-19",
@@ -258,15 +265,20 @@
     },
     {
       "date": "2026-11-13",
-      "label": "Deliverable 4: web map and poster (everyone); work frozen"
+      "label": "Deliverable 4: GIS Day web map and poster (everyone); work frozen"
+    },
+    {
+      "date": "2026-11-16",
+      "end": "2026-11-20",
+      "label": "TxGIS Day at Texas A&M: our poster and talk"
     },
     {
       "date": "2026-11-23",
-      "label": "Final presentations begin"
+      "label": "Final presentations (Nov 23, Nov 30 and Dec 2)"
     },
     {
       "date": "2026-12-06",
-      "label": "Course hard deadline: final report"
+      "label": "Deliverable 5: final report, code and demo video (course hard deadline)"
     }
   ]
 }
