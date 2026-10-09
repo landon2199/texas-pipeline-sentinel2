@@ -61,10 +61,14 @@ def prepare(img):
                                     "MEAN_SOLAR_ZENITH_ANGLE", "MEAN_INCIDENCE_ZENITH_ANGLE_B8"])
 
 
-def spring_images(region, year: int):
-    start, end = f"{year}-{SPRING[0]}", f"{year}-{SPRING[1]}"
+def images_between(region, start: str, end: str):
+    """Every Sentinel-2 image over the region from start up to (not including) end, masked and with the seven indices."""
     col = ee.ImageCollection(S2).filterBounds(region).filterDate(start, end).filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", SCENE_CLOUD_MAX))
     return col.linkCollection(ee.ImageCollection(CLOUD_SCORE), ["cs_cdf"]).map(prepare)
+
+
+def spring_images(region, year: int):
+    return images_between(region, f"{year}-{SPRING[0]}", f"{year}-{SPRING[1]}")
 
 
 def _grouped(stats: ee.Reducer, n_bands: int) -> ee.Reducer:
@@ -101,13 +105,20 @@ def _measure_each(images, zones, crs: str, footprint, extra, bands=None, scale=N
     return images.map(one).flatten()
 
 
+def _image_props(img):
+    return {"date": img.date().format("YYYY-MM-dd"), "image": img.get("system:index"),
+            "orbit": img.get("SENSING_ORBIT_NUMBER"), "tile": img.get("MGRS_TILE"),
+            "sun_zenith": img.get("MEAN_SOLAR_ZENITH_ANGLE"), "view_zenith": img.get("MEAN_INCIDENCE_ZENITH_ANGLE_B8")}
+
+
 def per_image_values(zones, region, year: int, crs: str):
     """Image by image, one row per Sentinel-2 tile. Where tiles overlap, a zone is measured twice in the same pass."""
-    def extra(img):
-        return {"date": img.date().format("YYYY-MM-dd"), "image": img.get("system:index"),
-                "orbit": img.get("SENSING_ORBIT_NUMBER"), "tile": img.get("MGRS_TILE"),
-                "sun_zenith": img.get("MEAN_SOLAR_ZENITH_ANGLE"), "view_zenith": img.get("MEAN_INCIDENCE_ZENITH_ANGLE_B8")}
-    return _measure_each(spring_images(region, year), zones, crs, lambda img: img.geometry(), extra)
+    return _measure_each(spring_images(region, year), zones, crs, lambda img: img.geometry(), _image_props)
+
+
+def per_image_between(zones, region, start: str, end: str, crs):
+    """The same image-by-image values for any date window (the spill series, plan 7.4)."""
+    return _measure_each(images_between(region, start, end), zones, crs, lambda img: img.geometry(), _image_props)
 
 
 def pass_mosaics(region, year: int):
