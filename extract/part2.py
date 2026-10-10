@@ -116,6 +116,18 @@ def per_image_values(zones, region, year: int, crs: str):
     return _measure_each(spring_images(region, year), zones, crs, lambda img: img.geometry(), _image_props)
 
 
+def lean_composite_values(zones, region, year: int, crs=None, bands=("NDVI", "NDMI")):
+    """The wall-to-wall measure: one spring median composite per index, then each zone's mean and pixel count by NLCD
+    land cover class. Cheaper than the image-by-image measure (one image per spring), so every segment can be measured;
+    the image-by-image sample stays the main test (plan 5.4)."""
+    bands = list(bands)
+    img = spring_images(region, year).select(bands).median().addBands(nlcd().rename("lc"))
+    out = img.reduceRegions(collection=zones, reducer=_grouped(ee.Reducer.mean().combine(ee.Reducer.count(), sharedInputs=True),
+                                                               len(bands)), scale=SCALE, crs=crs, tileScale=4)
+    rows = _flatten(out.filter(ee.Filter.neq("groups", [])), {"spring": year}, bands, ["mean", "count"])
+    return rows.filter(ee.Filter.gt(f"{bands[0]}_count", 0))
+
+
 def per_image_between(zones, region, start: str, end: str, crs):
     """The same image-by-image values for any date window (the spill series, plan 7.4)."""
     return _measure_each(images_between(region, start, end), zones, crs, lambda img: img.geometry(), _image_props)

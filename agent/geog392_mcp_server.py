@@ -11,7 +11,7 @@ Tools
   corridor_summary  the weighted statewide answer, or by ecoregion, commodity, service, diameter, status or accuracy
   distance_profile  how far from the pipe the effect reaches: the weighted gap in every 50 m band to 500 m
   segment           everything about one segment: labels, place, fixed values, its gaps spring by spring
-  hot_spots         ArcGIS Pro's Optimized Hot Spot Analysis on the segment midpoints (ArcPy)
+  hot_spots         Gi* hot spots on the segment midpoints: open source by default, ArcGIS Pro (ArcPy) as an option
   spill_timeline    one spill against its matched comparison spots, spring by spring (before-after-control-impact)
   spill_summary     the spill effect across all spills, with intervals, tests and fake-spill p-values
   left_out          what the statewide build covers and leaves out, with the reasons
@@ -263,6 +263,22 @@ def segment(segment_id: str) -> str:
     return "\n".join(lines)
 
 
+def _hot_spot_bins_open(field: str) -> tuple[dict[int, int], str]:
+    """Gi* with NumPy/SciPy (analysis/gi_star.py), 8 nearest neighbors and the FDR correction. On the same input it
+    reproduces ArcGIS Pro's Hot Spot Analysis exactly (checked Oct 9: identical z-scores and bins)."""
+    import sys
+    sys.path.insert(0, str(HERE.parent / "analysis"))
+    from gi_star import gi_bins
+    pts = pyogrio.read_dataframe(AGENT / "segment_points.gpkg", columns=["segment_id", field]).dropna(subset=[field])
+    _, b = gi_bins(np.c_[pts.geometry.x, pts.geometry.y], pts[field].to_numpy(), k=8)
+    pts["Gi_Bin"] = b
+    RUNS.mkdir(parents=True, exist_ok=True)
+    gpkg, layer = RUNS / "hotspots_open.gpkg", f"hotspots_{field.lower()}"
+    pyogrio.write_dataframe(pts, gpkg, layer=layer)
+    counts = pd.Series(b).value_counts()
+    return {int(k): int(v) for k, v in counts.items()}, str(gpkg / layer)
+
+
 def _hot_spot_bins(field: str) -> tuple[dict[int, int], str]:
     src = AGENT / "segment_points.gpkg"
     if not ARCPY_PYTHON.exists():
@@ -284,20 +300,26 @@ BIN_NAMES = {3: "hot spot, 99% confidence", 2: "hot spot, 95%", 1: "hot spot, 90
 
 
 @server.tool()
-def hot_spots(field: str = "NDVI_diff_0_50") -> str:
-    """Run ArcGIS Pro's Optimized Hot Spot Analysis (Getis-Ord Gi*) on the sampled segments' midpoints.
+def hot_spots(field: str = "NDVI_diff_0_50", engine: str = "open") -> str:
+    """Getis-Ord Gi* hot spots on the sampled segments' midpoints.
 
     field: NDVI_diff_0_50 (the NDVI gap), NDRE_gap_0_50, NDMI_gap_0_50 or BSI_gap_0_50. With an NDVI gap, a COLD spot
-    is a cluster of segments whose corridor is much less green than normal land. Takes a minute or two.
+    is a cluster of segments whose corridor is much less green than normal land.
+    engine: 'open' (default; NumPy/SciPy, 8 nearest neighbors, false discovery rate correction, seconds; identical to
+    ArcGIS Pro's Hot Spot Analysis with the same settings) or 'arcgis' (ArcGIS Pro's Optimized Hot Spot Analysis, which
+    picks its own distance band; a minute or two, only where ArcGIS Pro is installed).
     """
     allowed = ("NDVI_diff_0_50", "NDRE_gap_0_50", "NDMI_gap_0_50", "BSI_gap_0_50")
     if field not in allowed:
         raise ValueError(f"field must be one of {allowed}")
-    bins, output = _hot_spot_bins(field)
+    if engine not in ("open", "arcgis"):
+        raise ValueError("engine must be 'open' or 'arcgis'")
+    bins, output = _hot_spot_bins_open(field) if engine == "open" else _hot_spot_bins(field)
     LAST.clear()
     LAST.update(tool="hot_spots", field=field, result=bins, output=output)
+    name = "Gi* (open source, 8 nearest neighbors, FDR)" if engine == "open" else "ArcGIS Pro Optimized Hot Spot Analysis"
     rows = [f"{BIN_NAMES[b]}: {bins.get(b, 0)} segments" for b in (3, 2, 1, 0, -1, -2, -3)]
-    return f"Optimized Hot Spot Analysis on {field} ({sum(bins.values())} segments)\n" + "\n".join(rows) + f"\nOutput: {output}"
+    return f"{name} on {field} ({sum(bins.values())} segments)\n" + "\n".join(rows) + f"\nOutput: {output}"
 
 
 SPILL_INDICES = ("NDVI", "NDMI", "NDRE", "BSI")
@@ -417,7 +439,7 @@ def verify() -> str:
 
     query_zones: the same SQL in SQLite on freshly read tables. corridor_summary: the weighted medians recomputed from
     the per-segment table with plain NumPy. segment: the labels re-read from the sample GeoPackage with GDAL and the gap
-    recomputed as the median of its springs. hot_spots: GDAL re-reads ArcGIS Pro's output and recounts it.
+    recomputed as the median of its springs. hot_spots: GDAL re-reads the saved output (open-source or ArcGIS Pro) and recounts it.
     spill_timeline: DuckDB SQL recomputes the effect from the raw spill table. left_out: the parts must add up to the
     total, and the measured kilometers must equal the measured pieces in the zone files.
     """
@@ -476,7 +498,7 @@ def verify() -> str:
         recount = pyogrio.read_dataframe(gdb, layer=layer, columns=["Gi_Bin"], read_geometry=False)["Gi_Bin"].value_counts()
         recount = {int(k): int(v) for k, v in recount.items()}
         ok = recount == LAST["result"]
-        return f"{'AGREES' if ok else 'DISAGREES'}: GDAL recount of ArcGIS Pro's output {recount} vs reported {LAST['result']}."
+        return f"{'AGREES' if ok else 'DISAGREES'}: GDAL recount of the saved output {recount} vs reported {LAST['result']}."
     if tool == "spill_timeline":
         sql = """SELECT MAX(CASE WHEN status = 'after' AND years_from_spill = 1 THEN d END)
                         - AVG(CASE WHEN status = 'before' THEN d END)
