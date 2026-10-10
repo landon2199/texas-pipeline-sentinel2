@@ -100,13 +100,17 @@ def main(a):
     rows = refresh(read_log()) if LOG.exists() else {}
     texas = region_geometry("Texas")
     box = texas.bounds(100)
-    sample, spills = zones_of(a.sample), zones_of(a.spills)
-    s_name, p_name = Path(a.sample).name, Path(a.spills).name
-    both = sample.merge(spills)
+    sample = zones_of(a.sample)
+    s_name = Path(a.sample).name
+    if a.sample_only:
+        spills, p_name, both, fixed_name = None, "", sample, f"{s_name}_fixed"
+    else:
+        spills, p_name = zones_of(a.spills), Path(a.spills).name
+        both, fixed_name = sample.merge(spills), f"{s_name}_and_{p_name}_fixed"
 
-    if f"{s_name}_and_{p_name}_fixed" not in rows or rows[f"{s_name}_and_{p_name}_fixed"]["state"] in ("FAILED", "CANCELLED"):
-        submit(rows, f"{s_name}_and_{p_name}_fixed", part2.fixed_values(both, None, None, None), "fixed", "", "fixed",
-               f"{s_name}_and_{p_name}", a.drive_folder)
+    if fixed_name not in rows or rows[fixed_name]["state"] in ("FAILED", "CANCELLED"):
+        submit(rows, fixed_name, part2.fixed_values(both, None, None, None), "fixed", "", "fixed", fixed_name.removesuffix("_fixed"),
+               a.drive_folder)
 
     def pending_hours():
         """Estimated cost of jobs in the log that have not finished yet (their compute isn't counted by Earth Engine yet)."""
@@ -118,6 +122,17 @@ def main(a):
                     if r["measure"] == "per_image" else est.get(r["measure"], 1.0)
         return total
 
+    if a.sample_only:            # e.g. the coverage supplement: image-by-image values only, no spills, temperature or drought
+        for spring in a.springs:
+            used = month_used_hours() + pending_hours()
+            if used + EST["sample_per_image"] > a.budget:
+                print(f"spring {spring}: stopping at {used:,.1f} EECU-hours (budget {a.budget:,.0f})")
+                break
+            part2.SCALE, part2.TILE_SCALE = 20, 1
+            submit(rows, f"{s_name}_per_image_{spring}", part2.per_image_values(sample, box, spring, None), "per_image",
+                   spring, "per_image", s_name, a.drive_folder)
+        print(f"log: {LOG}")
+        return
     for spring in a.springs:
         need = EST["sample_per_image"] + EST["spills_per_image"] + EST["lst"] + EST["drought"]
         used = month_used_hours() + pending_hours()
@@ -149,11 +164,13 @@ if __name__ == "__main__":
     ap.add_argument("--drive-folder", default="geog392_zone_stats")
     ap.add_argument("--project", default="research-476723")
     ap.add_argument("--status", action="store_true", help="refresh the job log and stop")
+    ap.add_argument("--sample-only", action="store_true",
+                    help="only the sample's image-by-image values and fixed values (e.g. the coverage supplement)")
     a = ap.parse_args()
     ee.Initialize(project=a.project)
     if a.status:
         status()
-    elif not (a.sample and a.spills):
-        ap.error("--sample and --spills are needed to submit jobs")
+    elif not (a.sample and (a.spills or a.sample_only)):
+        ap.error("--sample and --spills (or --sample-only) are needed to submit jobs")
     else:
         main(a)

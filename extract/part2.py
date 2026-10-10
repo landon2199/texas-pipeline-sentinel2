@@ -121,7 +121,13 @@ def lean_composite_values(zones, region, year: int, crs=None, bands=("NDVI", "ND
     land cover class. Cheaper than the image-by-image measure (one image per spring), so every segment can be measured;
     the image-by-image sample stays the main test (plan 5.4)."""
     bands = list(bands)
-    img = spring_images(region, year).select(bands).median().addBands(nlcd().rename("lc"))
+    if year == 0:            # 0: one composite over all nine springs (March-April 2018-2026), measured once
+        col = ee.ImageCollection(spring_images(region, 2018))
+        for y in range(2019, 2027):
+            col = col.merge(spring_images(region, y))
+        img = col.select(bands).median().addBands(nlcd().rename("lc"))
+    else:
+        img = spring_images(region, year).select(bands).median().addBands(nlcd().rename("lc"))
     out = img.reduceRegions(collection=zones, reducer=_grouped(ee.Reducer.mean().combine(ee.Reducer.count(), sharedInputs=True),
                                                                len(bands)), scale=SCALE, crs=crs, tileScale=4)
     rows = _flatten(out.filter(ee.Filter.neq("groups", [])), {"spring": year}, bands, ["mean", "count"])
