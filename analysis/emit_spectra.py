@@ -32,12 +32,13 @@ EMIT = P / "outputs" / "emit"
 def load() -> tuple[pd.DataFrame, np.ndarray]:
     rfl = pd.concat([pd.read_csv(f, usecols=["Category", "ID", "Date", "wavelength", "reflectance", "good_wavelengths"])
                      for f in sorted(EMIT.glob("part*RFL-001-results.csv"))]).drop_duplicates(["ID", "Date", "wavelength"])
-    rfl.loc[(rfl["good_wavelengths"] != 1) | (rfl["reflectance"] < 0) | (rfl["reflectance"] > 1.5), "reflectance"] = np.nan
+    water_vapor = rfl["wavelength"].between(1340, 1460) | rfl["wavelength"].between(1790, 1960) | (rfl["wavelength"] > 2450)
+    rfl.loc[(rfl["good_wavelengths"] != 1) | water_vapor | (rfl["reflectance"] < 0) | (rfl["reflectance"] > 1.5), "reflectance"] = np.nan
     mask = pd.concat([pd.read_csv(f) for f in sorted(EMIT.glob("part*MASK-001-results.csv"))]).drop_duplicates(["ID", "Date"])
     bad = mask[(mask["dilated_cloud_flag"] == 1) | (mask["aggregate_flag"] == 1)][["ID", "Date"]]
     rfl = rfl.merge(bad.assign(bad=1), on=["ID", "Date"], how="left")
     rfl = rfl[rfl["bad"].isna()]
-    wide = rfl.pivot_table(index=["Category", "ID", "Date"], columns="wavelength", values="reflectance")
+    wide = rfl.pivot_table(index=["Category", "ID", "Date"], columns="wavelength", values="reflectance", dropna=False)
     return wide, wide.columns.to_numpy(dtype=float)
 
 
@@ -118,7 +119,7 @@ def main(a):
             ax.text(nm, ax.get_ylim()[1], lab, fontsize=6, ha="center", va="bottom", color="#666")
         ax.set_xlabel("wavelength (nm)")
         ax.set_ylabel("change in reflectance,\nspill minus spots")
-        ax.set_title(f"EMIT: how the spill sites' spectrum changed after the spill ({len(s)} spills; line = mean, band = middle half)",
+        ax.set_title(f"EMIT: change in the spill sites' spectrum after the spill ({len(s)} spills)",
                      fontsize=8, loc="left")
         for sp_ in ("top", "right"):
             ax.spines[sp_].set_visible(False)
