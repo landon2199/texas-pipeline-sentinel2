@@ -88,6 +88,12 @@ Rules:
 - Clusters: hot_spots (ArcGIS Pro; a minute or two). Coverage: left_out.
 - The app checks every tool answer independently; you do not need to call verify.
 - Read significance from the tools, not your own judgment; repeat their "Reading it" lines.
+- Scope: the data cover Texas only, the springs (March-April) of 2018 to 2026, and distances out to 1,000 m from the
+  pipe (ten 50 m bands to 500 m and the comparison ring at 500-1,000 m). The tools have no methane, population or
+  forecast of future spills. When a question is outside that, say so plainly and say what the project does have; never
+  substitute another year, place or distance for the one asked about.
+- In query_zones, springs, diameter_class and location_accuracy are text (springs = '2020'); diameter_in is the pipe
+  size in inches as a number.
 - Answer in two to five short, plain sentences. These are first results, not findings. Name the segment IDs or spill IDs
   the user should look at on the map."""
 
@@ -131,8 +137,12 @@ SPILL_ID = re.compile(r"\bS\d{3}\b")
 NUMBER = re.compile(r"(?<![\w.])[-+−]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:[eE][-+]?\d+)?%?")
 
 
+ISO_DATE = re.compile(r"\b\d{4}-\d{2}-\d{2}(?:[T ][\d:.]+Z?)?\b")
+LIST_MARKER = re.compile(r"(?m)^\s*\d{1,2}[.)](?=\s)")          # "3. Segment ..." in a numbered list is not a number
+
+
 def _numbers(text: str) -> list[str]:
-    text = SEGMENT_ID.sub(" ", SPILL_ID.sub(" ", text))
+    text = LIST_MARKER.sub(" ", ISO_DATE.sub(" ", SEGMENT_ID.sub(" ", SPILL_ID.sub(" ", text))))
     return [m.group(0) for m in NUMBER.finditer(text)]
 
 
@@ -175,9 +185,35 @@ def _chart(step: dict) -> dict | None:
         return None
 
 
+US_STATES = ["Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida",
+             "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine",
+             "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska",
+             "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio",
+             "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Utah",
+             "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming", "Mexico", "Canada"]
+
+
+def scope_notes(question: str) -> list[str]:
+    """A deterministic check, like the number check: years, places and distances the data don't cover."""
+    notes = []
+    for y in re.findall(r"\b(19\d{2}|20\d{2})\b", question):
+        if not 2018 <= int(y) <= 2026:
+            notes.append(f"{y} is outside the measured springs (2018 to 2026)")
+    for value, unit in re.findall(r"(\d+(?:\.\d+)?)\s*(km|kilometers?|kilometres?|miles?|mi|m|meters?|metres?)\b", question, re.I):
+        meters = float(value) * (1000 if unit.lower().startswith("k") else 1609 if unit.lower().startswith("mi") else 1)
+        if meters > 1000:
+            notes.append(f"{value} {unit} is beyond the zones, which reach 1,000 m from the pipe")
+    notes += [f"{s} is outside the study, which covers Texas only" for s in US_STATES if re.search(rf"\b{s}\b", question)]
+    return notes
+
+
 async def ask(question: str) -> dict:
     STATE["nudged"] = False
-    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}]
+    notes = scope_notes(question)
+    content = question if not notes else (
+        question + "\n\n(Scope check by the app: " + "; ".join(notes) + ". Say plainly that this is outside the project's "
+        "data and what it does cover; do not answer with another year, place or distance.)")
+    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": content}]
     steps, started = [], time.time()
     for _ in range(MAX_STEPS):
         reply = await asyncio.to_thread(_ollama_chat, messages, STATE["tools"])

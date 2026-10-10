@@ -31,7 +31,8 @@ DECLINE = re.compile(r"not available|no data|n['’]t have|do not have|does not 
                      r"was not measured|can['’]t|cannot|unable|outside|only covers?|no information|not in (the|our)|beyond|"
                      r"not part of|n['’]t include|does not include|no tool|not possible|isn['’]t possible|only (from|for)|"
                      r"starts? in 2018|2018 (to|through|-|–) ?2026|only texas|texas only|not covered|no record|not included|"
-                     r"don['’]t know|do not know|not yet", re.I)
+                     r"don['’]t know|do not know|not yet|could not|couldn['’]t|does not provide|doesn['’]t provide|"
+                     r"does not mention|doesn['’]t mention|no methane|no population|no forecast|does not predict", re.I)
 
 
 def tables():
