@@ -42,9 +42,15 @@ def main(a):
     (OUT / "figures").mkdir(exist_ok=True)
     segs = pick(a.per_class, a.seed)
     print(f"{len(segs)} fresh segments: {segs['location_accuracy'].value_counts().to_dict()}", flush=True)
+    rows = []
+    if (OUT / "results.csv").exists() and not a.redo:        # keep finished segments; run only the ones that failed
+        old = pd.read_csv(OUT / "results.csv")
+        old = old[old["segment_id"].isin(segs["segment_id"])].drop(columns=["checkpoint", "offset_m", "photo_check_first"], errors="ignore")
+        rows = old.to_dict("records")
+        segs = segs[~segs["segment_id"].isin(old["segment_id"])]
+        print(f"  {len(rows)} done before; {len(segs)} to run", flush=True)
     from samgeo import SamGeo2
     sam = SamGeo2(model_id="sam2-hiera-large", automatic=False)
-    rows = []
     for s in segs.itertuples():
         line = shapely.line_merge(s.geometry) if s.geometry.geom_type == "MultiLineString" else s.geometry
         try:
@@ -72,6 +78,8 @@ def main(a):
     t = pd.DataFrame(rows)
     t["checkpoint"] = (t["sam_offset_m"] - t["ndvi_offset_m"]).abs() <= 20
     t["offset_m"] = np.where(t["checkpoint"], (t["sam_offset_m"] + t["ndvi_offset_m"]) / 2, np.nan)
+    # two methods can agree on the wrong strip (a road or another right-of-way alongside), most likely far from the line
+    t["photo_check_first"] = t["offset_m"].abs() > 30
     t.to_csv(OUT / "results.csv", index=False)
     lines = [f"# Where is the pipe? Right-of-way finder on {len(t)} fresh segments ({pd.Timestamp.today():%Y-%m-%d})", "",
              "| Mapped accuracy | Segments | SAM 2 found a strip | Checkpoints (both methods agree) | Cross-track RMSE (m) | Median abs. offset (m) | Max (m) |",
@@ -86,6 +94,10 @@ def main(a):
     by_eco = t.groupby("ecoregion").agg(segments=("segment_id", "size"), checkpoints=("checkpoint", "sum"))
     lines += ["", "Strip found and confirmed, by ecoregion: " +
               ", ".join(f"{e} {int(r.checkpoints)}/{int(r.segments)}" for e, r in by_eco.iterrows()) + ".", "",
+              f"{int(t['photo_check_first'].sum())} checkpoints sit more than 30 m from the mapped line "
+              "(`photo_check_first`): the two methods may have agreed on a road or another right-of-way alongside, so "
+              "Group A looks at those first. Without them, the cross-track RMSE is "
+              f"{np.sqrt((t.loc[~t['photo_check_first'], 'offset_m'].dropna() ** 2).mean()):.1f} m.", "",
               "Checkpoints come from imagery (two independent methods agreeing), not from survey, so this is a screening "
               "estimate of the lines' position error; Group A's photo check of these segments confirms it. A cross-track "
               "error under about 25 m keeps the pipe inside the 0-50 m band. First results, not findings."]
@@ -97,4 +109,5 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--per-class", type=int, default=20)
     ap.add_argument("--seed", type=int, default=2026)
+    ap.add_argument("--redo", action="store_true", help="rerun every segment, not just the ones without a result")
     main(ap.parse_args())

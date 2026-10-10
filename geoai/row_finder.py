@@ -19,6 +19,7 @@ Run with the GeoAI environment: C:\\Users\\Landon\\miniforge3\\envs\\geog392-geo
 import argparse
 import os
 import sys
+import time
 from pathlib import Path
 
 os.environ.setdefault("GDAL_DATA", str(Path(sys.prefix) / "Library" / "share" / "gdal"))
@@ -55,9 +56,13 @@ def naip_chip(geom, path: Path):
         return path
     x0, y0, x1, y1 = geom.buffer(REACH + 60).bounds
     w, h = int((x1 - x0) / PIXEL), int((y1 - y0) / PIXEL)
-    r = requests.get(NAIP, params={"bbox": f"{x0},{y0},{x1},{y1}", "bboxSR": 6579, "imageSR": 6579, "size": f"{w},{h}",
-                                   "format": "tiff", "pixelType": "U8", "interpolation": "RSP_BilinearInterpolation",
-                                   "f": "image"}, timeout=180)
+    for attempt in range(4):                      # the National Map server returns 502s now and then
+        r = requests.get(NAIP, params={"bbox": f"{x0},{y0},{x1},{y1}", "bboxSR": 6579, "imageSR": 6579, "size": f"{w},{h}",
+                                       "format": "tiff", "pixelType": "U8", "interpolation": "RSP_BilinearInterpolation",
+                                       "f": "image"}, timeout=180)
+        if r.status_code < 500 or attempt == 3:
+            break
+        time.sleep(20 * (attempt + 1))
     r.raise_for_status()
     if not r.content.startswith((b"II", b"MM")):
         raise RuntimeError(f"NAIP did not return a TIFF: {r.content[:200]!r}")
