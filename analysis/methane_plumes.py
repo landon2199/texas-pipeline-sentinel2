@@ -96,7 +96,7 @@ def main(a):
                label=f"plume within 250 m of a gas line ({int(close.sum()):,})")
     ax.set_axis_off()
     ax.set_title("Methane plumes seen from the air and space over Texas, with Railroad Commission gas lines\n"
-                 "Carbon Mapper (Tanager-1, EMIT, AVIRIS); size = emission rate", fontsize=9, loc="left")
+                 "Data by Carbon Mapper® (Tanager-1, EMIT, AVIRIS), noncommercial use; size = emission rate", fontsize=9, loc="left")
     ax.legend(frameon=False, fontsize=7, loc="lower left")
     fig.tight_layout()
     fig.savefig(out / "figure_methane_plumes.png", facecolor="white")
@@ -120,7 +120,7 @@ def main(a):
                ["", "By platform: " + ", ".join(f"{k} {v:,}" for k, v in inst.items()) + ".",
                 "By year: " + ", ".join(f"{k} {v:,}" for k, v in years.items()) + ".", "",
                 "Nearness is not attribution: wells, compressors and tanks sit beside the lines, and both locations have "
-                "errors. Data: Carbon Mapper (data.carbonmapper.org); credit them on any map."]
+                "errors. Data by Carbon Mapper® (data.carbonmapper.org): noncommercial use only, and the credit must appear on any map or poster."]
     (out / "SUMMARY.md").write_text("\n".join(lines_md) + "\n", encoding="utf-8")
     print("\n".join(lines_md))
 
