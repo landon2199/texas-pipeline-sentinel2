@@ -12,6 +12,10 @@ is the mean of the two. Reported:
     estimate. Group A's photo check of the same segments is the independent confirmation.
 Run with the GeoAI environment: C:\\Users\\Landon\\miniforge3\\envs\\geog392-geoai\\python.exe row_survey.py [--per-class 20]
 Writes outputs/geoai/row_survey/: results.csv, SUMMARY.md and a figure per segment.
+
+With --by diameter (plan D28) it instead draws --per-class fresh segments from each pipe diameter class, never one
+already surveyed, to measure how wide the cleared strip is for each pipe size: the clearing-width calibration
+(analysis/clearing_calibration.py). Written to outputs/geoai/width_survey/.
 """
 import argparse
 import sys
@@ -29,19 +33,29 @@ import row_finder as rf  # noqa: E402
 OUT = rf.P / "outputs" / "geoai" / "row_survey"
 
 
-def pick(per_class: int, seed: int) -> gpd.GeoDataFrame:
+DIAMETERS = ["Under 4.5 in", "4.5-8.6 in", "8.6-12.75 in", "12.75-16 in", "16-24 in", "24-36 in", "Over 36 in"]
+
+
+def pick(per_class: int, seed: int, by: str = "accuracy") -> gpd.GeoDataFrame:
     seg = gpd.read_file(rf.P / "outputs" / "zones" / "sample_v1" / "sample.gpkg", layer="segments")
-    tuned = set(pd.read_csv(rf.OUT / "row_finder_results.csv")["segment_id"]) if (rf.OUT / "row_finder_results.csv").exists() else set()
-    seg = seg[seg["status"].eq("In service") & ~seg["segment_id"].isin(tuned)]
-    return pd.concat([g.sample(n=min(per_class, len(g)), random_state=seed)
-                      for a, g in seg.groupby("location_accuracy") if a in rf.ACCURACY])
+    done = set(pd.read_csv(rf.OUT / "row_finder_results.csv")["segment_id"]) if (rf.OUT / "row_finder_results.csv").exists() else set()
+    if by == "diameter":                # never re-measure a segment the accuracy survey already has
+        prev = rf.P / "outputs" / "geoai" / "row_survey" / "results.csv"
+        done |= set(pd.read_csv(prev)["segment_id"]) if prev.exists() else set()
+    seg = seg[seg["status"].eq("In service") & ~seg["segment_id"].isin(done)]
+    col, keep = ("diameter_class", DIAMETERS) if by == "diameter" else ("location_accuracy", rf.ACCURACY)
+    return pd.concat([g.sample(n=min(per_class, len(g)), random_state=seed) for a, g in seg.groupby(col) if a in keep])
 
 
 def main(a):
+    global OUT
+    if a.by == "diameter":
+        OUT = rf.P / "outputs" / "geoai" / "width_survey"
     (OUT / "chips").mkdir(parents=True, exist_ok=True)
     (OUT / "figures").mkdir(exist_ok=True)
-    segs = pick(a.per_class, a.seed)
-    print(f"{len(segs)} fresh segments: {segs['location_accuracy'].value_counts().to_dict()}", flush=True)
+    segs = pick(a.per_class, a.seed, a.by)
+    col = "diameter_class" if a.by == "diameter" else "location_accuracy"
+    print(f"{len(segs)} fresh segments: {segs[col].value_counts().to_dict()}", flush=True)
     rows = []
     if (OUT / "results.csv").exists() and not a.redo:        # keep finished segments; run only the ones that failed
         old = pd.read_csv(OUT / "results.csv")
@@ -69,7 +83,8 @@ def main(a):
             print(f"  {s.segment_id}: failed ({type(e).__name__}: {e})", flush=True)
             continue
         res = {"segment_id": s.segment_id, "location_accuracy": s.location_accuracy, "ecoregion": s.ecoregion,
-               "commodity": s.commodity, "diameter_in": s.diameter_in, **res,
+               "commodity": s.commodity, "service": s.service, "diameter_in": s.diameter_in,
+               "diameter_class": s.diameter_class, **res,
                **({k: v for k, v in best.items() if k not in ("mask", "rank")} if best else {"sam_offset_m": np.nan})}
         rf.figure(chip, line, res, prof, best, transform, OUT / "figures" / f"{s.segment_id}.png")
         rows.append(res)
@@ -81,6 +96,21 @@ def main(a):
     # two methods can agree on the wrong strip (a road or another right-of-way alongside), most likely far from the line
     t["photo_check_first"] = t["offset_m"].abs() > 30
     t.to_csv(OUT / "results.csv", index=False)
+    if a.by == "diameter":
+        cp = t[t["checkpoint"] & ~t["photo_check_first"]]
+        lines = [f"# How wide is the cleared strip? {len(t)} fresh segments by pipe size ({pd.Timestamp.today():%Y-%m-%d})", "",
+                 "| Diameter | Segments | SAM 2 found a strip | Confirmed (both methods agree) | Median SAM 2 width (m) | Median NDVI width (m) |",
+                 "|---|---|---|---|---|---|"]
+        for d in DIAMETERS:
+            g, c = t[t["diameter_class"] == d], cp[cp["diameter_class"] == d]
+            lines.append(f"| {d} | {len(g)} | {int(g['sam_offset_m'].notna().sum())} | {len(c)} | "
+                         f"{g['sam_width_m'].median():.0f} | {c['ndvi_width_m'].median():.0f} |")
+        lines += ["", "SAM 2's width is the 10th-90th percentile spread of the strip mask (about 80% of the full width); "
+                  "the NDVI width runs between the trough's half-depth edges. analysis/clearing_calibration.py turns these "
+                  "into a cleared width per pipe size. First results, not findings."]
+        (OUT / "SUMMARY.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        print("\n".join(lines))
+        return
     lines = [f"# Where is the pipe? Right-of-way finder on {len(t)} fresh segments ({pd.Timestamp.today():%Y-%m-%d})", "",
              "| Mapped accuracy | Segments | SAM 2 found a strip | Checkpoints (both methods agree) | Cross-track RMSE (m) | Median abs. offset (m) | Max (m) |",
              "|---|---|---|---|---|---|---|"]
@@ -110,4 +140,6 @@ if __name__ == "__main__":
     ap.add_argument("--per-class", type=int, default=20)
     ap.add_argument("--seed", type=int, default=2026)
     ap.add_argument("--redo", action="store_true", help="rerun every segment, not just the ones without a result")
+    ap.add_argument("--by", choices=["accuracy", "diameter"], default="accuracy",
+                    help="draw segments per mapped-accuracy class (position check) or per diameter class (width calibration)")
     main(ap.parse_args())

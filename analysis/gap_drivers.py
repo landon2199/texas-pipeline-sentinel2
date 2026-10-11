@@ -176,7 +176,10 @@ def main(a):
     lines += ["", "The model predicts single segments poorly, but its partial dependence points the same way as the design-based "
               "estimates by pipe size (corridor.py, weighted medians with 95% intervals): " +
               "; ".join(f"{g} {r.weighted_median:+.4f} [{r.lo95:+.4f}, {r.hi95:+.4f}]" for g, r in s.iterrows()) +
-              ". That fits wider, more cleared rights-of-way on bigger pipes."]
+              ". Bigger pipes have wider clearings (about 80 ft of construction clearing for 8-16 in pipe, 125 ft for "
+              "40-42 in; INGAA Foundation 1999), and the 0-50 m band is the same width for every pipe. So part or all of "
+              "this trend can be clearing width, not a stronger effect per square meter of cleared ground. Group "
+              "comparisons at one size mix are in size_standardized (plan D27)."]
     lines += ["", "It shows what goes with the gap, not what causes it: predictors are correlated (e.g. land cover and terrain), "
               "and permutation importance splits shared credit between them. First results, not findings."]
     (OUT / "SUMMARY.md").write_text("\n".join(lines) + "\n", encoding="utf-8")

@@ -219,6 +219,65 @@ def lst_values(zones, region, year: int, crs):
                          bands=["LST"], scale=LST_SCALE)
 
 
+# ---- Landsat 5, 7, 8 and 9 surface reflectance: the spill test back to 2010 (plan D30) -----------------------------
+LANDSAT_SR = {"LANDSAT/LT05/C02/T1_L2": "TM", "LANDSAT/LE07/C02/T1_L2": "ETM", "LANDSAT/LC08/C02/T1_L2": "OLI",
+              "LANDSAT/LC09/C02/T1_L2": "OLI"}
+TM_BANDS = ["SR_B1", "SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B7"]           # TM and ETM+: blue ... SWIR2
+OLI_BANDS = ["SR_B2", "SR_B3", "SR_B4", "SR_B5", "SR_B6", "SR_B7"]          # OLI and OLI-2
+SR_NAMES = ["blue", "green", "red", "nir", "swir1", "swir2"]
+ROY_SLOPE = [0.8474, 0.8483, 0.9047, 0.8462, 0.8937, 0.9071]              # Roy et al. (2016), ETM+ to OLI surface
+ROY_ICPT = [0.0003, 0.0088, 0.0061, 0.0412, 0.0254, 0.0172]               # reflectance (OLS); used for TM as well
+LANDSAT_INDICES = ["NDVI", "NDMI", "SAVI", "MNDWI", "BSI"]                # no red-edge bands: no NDRE or S2REP
+LANDSAT_SCALE = 30
+
+
+def prepare_landsat(img, sensor: str):
+    """Collection 2 Level-2 surface reflectance (x 0.0000275 - 0.2), TM/ETM+ adjusted to OLI, with fill, cloud, cirrus,
+    shadow, snow, water and saturated pixels masked (QA_PIXEL, QA_RADSAT) and the Sentinel-2 water rules (water in the
+    image, MNDWI above 0; JRC or NLCD water with a 20 m shoreline). Landsat 7's scan-line gaps stay missing."""
+    s = img.select(OLI_BANDS if sensor == "OLI" else TM_BANDS, SR_NAMES).multiply(0.0000275).add(-0.2)
+    if sensor != "OLI":
+        s = s.multiply(ee.Image.constant(ROY_SLOPE)).add(ee.Image.constant(ROY_ICPT)).rename(SR_NAMES)
+    mndwi = s.normalizedDifference(["green", "swir1"]).rename("MNDWI")
+    keep = (img.select("QA_PIXEL").bitwiseAnd(QA_BAD).eq(0).And(img.select("QA_RADSAT").eq(0))
+            .And(mndwi.lte(0)).And(near_static_water().Not()))
+    b = {k: s.select(k) for k in SR_NAMES}
+    out = ee.Image.cat([
+        s.normalizedDifference(["nir", "red"]).rename("NDVI"),
+        s.normalizedDifference(["nir", "swir1"]).rename("NDMI"),
+        s.expression("1.5 * (N - R) / (N + R + 0.5)", {"N": b["nir"], "R": b["red"]}).rename("SAVI"),
+        mndwi,
+        s.expression("((W + R) - (N + B)) / ((W + R) + (N + B))",
+                     {"W": b["swir1"], "R": b["red"], "N": b["nir"], "B": b["blue"]}).rename("BSI"),
+    ]).updateMask(keep)
+    return out.copyProperties(img, ["system:time_start", "system:index", "WRS_PATH", "WRS_ROW", "SPACECRAFT_ID", "SUN_ELEVATION"])
+
+
+def _landsat_prep(sensor: str):
+    return lambda img: prepare_landsat(img, sensor)
+
+
+def landsat_sr_spring(region, year: int):
+    start, end = f"{year}-{SPRING[0]}", f"{year}-{SPRING[1]}"
+    out = None
+    for asset, sensor in LANDSAT_SR.items():
+        c = (ee.ImageCollection(asset).filterBounds(region).filterDate(start, end)
+             .filter(ee.Filter.lt("CLOUD_COVER", SCENE_CLOUD_MAX)).map(_landsat_prep(sensor)))
+        out = c if out is None else out.merge(c)
+    return out
+
+
+def landsat_sr_values(zones, region, year: int, crs=None):
+    """Image by image: every zone's mean and pixel count of the five Landsat indices, by land cover class (D30).
+    'orbit' is the WRS path, so one image per site and pass can be kept as with Sentinel-2."""
+    def extra(img):
+        return {"date": img.date().format("YYYY-MM-dd"), "image": img.get("system:index"), "orbit": img.get("WRS_PATH"),
+                "tile": img.get("WRS_ROW"), "spacecraft": img.get("SPACECRAFT_ID"),
+                "sun_zenith": ee.Number(90).subtract(img.get("SUN_ELEVATION"))}
+    return _measure_each(landsat_sr_spring(region, year), zones, crs, lambda img: img.geometry(), extra,
+                         bands=LANDSAT_INDICES, scale=LANDSAT_SCALE)
+
+
 # ---- Fixed values, measured once per zone (plan 5.4) -----------------------------------------------------------------
 def fixed_image():
     """Elevation and slope (USGS 3DEP 10 m), height above the nearest drainage and a wetness index (MERIT Hydro; Yamazaki

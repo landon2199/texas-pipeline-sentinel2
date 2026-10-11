@@ -4,7 +4,8 @@
       right-of-way reports with the PHMSA narrative, and for each field (how found, soil removed, reached water,
       plants or crops mentioned) an empty column for a person's answer. The reader's own answers sit in a separate,
       hidden sheet so the person labels from the narrative alone.
-  python gold_sheet.py --score           reads the filled sheet and writes outputs/discovery/gold_accuracy.md: per field
+  python gold_sheet.py --team-copy       writes the fill-in copy (no reader tab) to outputs/checks/gold_labels.xlsx
+  python gold_sheet.py --score           reads the filled sheet (the outputs/checks copy if it exists) and writes outputs/discovery/gold_accuracy.md: per field
       the share the reader got right with a Wilson 95% interval, and a confusion table (good practice for thematic
       accuracy: Olofsson et al. 2014; Stehman and Foody 2019).
 The sheet has no satellite results, so it is safe for anyone, including the photo checkers.
@@ -63,8 +64,27 @@ def wilson(k: int, n: int):
     return c - h, c + h
 
 
+def team_copy():
+    """The sheet the team fills in: outputs/checks/gold_labels.xlsx, with the help tab and the labels tab only, so the
+    reader's answers can't be unhidden. Scoring reads the reader's answers from spill_reports.parquet, not the sheet."""
+    out = P / "outputs" / "checks" / "gold_labels.xlsx"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with pd.ExcelWriter(out) as xw:
+        for name in ("how to label", "labels"):
+            pd.read_excel(D / "gold_labels.xlsx", sheet_name=name, dtype=str).to_excel(xw, sheet_name=name, index=False)
+    from openpyxl import load_workbook
+    wb = load_workbook(out)
+    wb["labels"].column_dimensions["C"].width = 90
+    for row in wb["labels"].iter_rows(min_row=2, min_col=3, max_col=3):
+        for c in row:
+            c.alignment = c.alignment.copy(wrap_text=True, vertical="top")
+    wb.save(out)
+    print(f"wrote {out} (no reader tab)")
+
+
 def score():
-    lab = pd.read_excel(D / "gold_labels.xlsx", sheet_name="labels", dtype=str)
+    team = P / "outputs" / "checks" / "gold_labels.xlsx"          # the team's filled copy, if they used it
+    lab = pd.read_excel(team if team.exists() else D / "gold_labels.xlsx", sheet_name="labels", dtype=str)
     r = pd.read_parquet(D / "spill_reports.parquet", columns=["REPORT_NUMBER"] + list(FIELDS)).astype({"REPORT_NUMBER": str})
     m = lab.astype({"REPORT_NUMBER": str}).merge(r, on="REPORT_NUMBER", how="left")
     lines = [f"# How accurate is the narrative reader? ({pd.Timestamp.today():%Y-%m-%d})", "",
@@ -86,7 +106,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--make", action="store_true")
     ap.add_argument("--score", action="store_true")
+    ap.add_argument("--team-copy", action="store_true", help="write the fill-in copy to outputs/checks")
     ap.add_argument("--n", type=int, default=30)
     ap.add_argument("--seed", type=int, default=392)
     a = ap.parse_args()
-    make(a.n, a.seed) if a.make else score() if a.score else ap.print_help()
+    make(a.n, a.seed) if a.make else score() if a.score else team_copy() if a.team_copy else ap.print_help()

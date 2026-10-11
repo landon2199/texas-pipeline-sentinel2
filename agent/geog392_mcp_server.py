@@ -197,6 +197,16 @@ def corridor_summary(index: str = "NDVI", ring: str = "0-50 m", by: str = "state
                 f"({lo['weighted_median']:+.4f}, 95% {lo['lo95']:+.4f} to {lo['hi95']:+.4f}) and the least negative is "
                 f"{hi['group']} ({hi['weighted_median']:+.4f}, 95% {hi['lo95']:+.4f} to {hi['hi95']:+.4f}). Their intervals "
                 f"{'overlap, so this sample cannot tell them apart' if overlap else 'do not overlap, so the two groups differ'}.\n")
+    std = PROJECT / "outputs" / "results" / "size_standardized" / "estimates.csv"
+    if by not in ("statewide", "diameter_class") and ring == "0-50 m" and measure == "same land cover" \
+            and str(springs) == "all springs" and std.exists():
+        s = pd.read_csv(std)
+        s = s[(s["index"] == index) & (s["scope"] == by)].dropna(subset=["size_standardized"])
+        if len(s):                     # plan D27: bigger pipes have wider clearings, so compare groups at one size mix
+            note += ("\nAt the statewide mix of pipe sizes (plan D27). Bigger pipes have wider clearings and the band is "
+                     "the same width for every pipe, so compare groups with these values: " +
+                     "; ".join(f"{r.group} {r.size_standardized:+.4f} (95% {r.std_lo95:+.4f} to {r.std_hi95:+.4f})"
+                               for r in s.sort_values("size_standardized").itertuples()) + ".\n")
     return head + shown.to_csv(index=False, float_format="%.5f") + note
 
 

@@ -96,8 +96,9 @@ def main(a):
     cb.set_label("NDVI gap, 0-50 m minus comparison\n(same land cover)", fontsize=7)
     cb.ax.tick_params(labelsize=6.5)
     ax.set_title(f"Every measured pipeline segment, spring {a.spring} median composite ({len(ok):,} segments, "
-                 f"{km.sum():,.0f} km)\nRed: less green beside the pipe. Gaps within 1 km of a reported spill are left out "
-                 "until the photo check. First results.", fontsize=7.5, loc="left")
+                 f"{km.sum():,.0f} km)\nRed: less green beside the pipe. Big lines stand out partly because their clearings "
+                 "are wider.\nGaps within 1 km of a reported spill are left out until the photo check. First results.",
+                 fontsize=7.5, loc="left")
     fig.savefig(out / "figure_wall_to_wall.png", facecolor="white", bbox_inches="tight")
     plt.close(fig)
 
@@ -122,7 +123,10 @@ def main(a):
              "The composite measure is for the map; the sample is the test.", "",
              "| Ecoregion | Wall-to-wall: median NDVI gap (length-weighted) | Sample, image by image, same spring [95% CI] |",
              "|---|---|---|"] + [f"| {e} | {v:+.4f} | {sample.get(e, '-')} |" for e, v in eco.items()] + \
-            ["", "Outputs: segments.parquet (GeoParquet), gap_1km.tif (COG, 1 km cells, EPSG:6579), figure_wall_to_wall.png. "
+            ["", "Reading the map: the 0-50 m band is the same width for every pipe, and bigger pipes have wider clearings, so "
+             "big lines look redder partly because more of their band is cleared. Compare groups at one size mix "
+             "(size_standardized, plan D27), not by eye.", "",
+             "Outputs: segments.parquet (GeoParquet), gap_1km.tif (COG, 1 km cells, EPSG:6579), figure_wall_to_wall.png. "
              "First results, not findings."]
     (out / "SUMMARY.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
