@@ -38,6 +38,8 @@ credentials or anything you would not want shared.
 | `geoai/` | GeoAI prototypes, such as finding the cleared right-of-way in aerial photos with SAM 2 |
 | `docs/` | Sources of the team documents (analysis plan, START HERE, kickoff) and the scripts that build them and the team notebooks |
 | `leaks/` | Reported pipeline spills from PHMSA, matched to the Railroad Commission lines, and the proposal figure |
+| `common/` | Helpers the scripts share: where the project folder is (set `GEOG392_PROJECT` to use another copy), the weighted median and bootstrap, ring labels, diameter classes |
+| `tests/` | Small fixtures and the tests that check the shared helpers on them: `python -m pytest tests` |
 | `requirements.txt` | The Python packages to install: `pip install -r requirements.txt` |
 
 Large data does not go in this repository. Last year's full project is kept outside the shared folder, in
