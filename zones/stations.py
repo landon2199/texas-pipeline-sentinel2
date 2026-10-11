@@ -15,6 +15,7 @@ Writes outputs/zones/statewide/spill_stations.csv and the routes' segment table 
 outputs/zones/statewide/route_segments.parquet (GeoParquet, the lines of every route that has a spill).
 Usage: python stations.py
 """
+import sys
 from pathlib import Path
 
 import geopandas as gpd
@@ -23,10 +24,11 @@ import pandas as pd
 import pyogrio
 import shapely
 
-from labels import station
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.config import S  # noqa: E402
+from labels import station  # noqa: E402
 
-P = Path(r"C:\mydrive\Graduate School\Courses\GEOG_392\projects")
-S = P / "outputs" / "zones" / "statewide"
 SEG_COLS = ["segment_id", "line_uid", "ecoregion", "piece_m", "start_m", "end_m", "start_station", "end_station",
             "commodity", "service", "diameter_in", "location_accuracy", "status", "county_fips", "has_zones", "has_comparison"]
 

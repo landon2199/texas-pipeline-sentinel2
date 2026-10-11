@@ -7,11 +7,15 @@ without a clean comparison ring keep only their band here; the coverage suppleme
 Usage: python wall_zones.py --zones outputs/zones/statewide [--out outputs/zones/statewide/ee_upload_wall]
 """
 import argparse
+import sys
 from pathlib import Path
 
 import pandas as pd
 
-KEEP = ("_r0-50", "_r500-1000")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.rings import BAND, COMPARISON, suffix  # noqa: E402
+
+KEEP = (suffix(BAND), suffix(COMPARISON))
 
 
 def main(a):

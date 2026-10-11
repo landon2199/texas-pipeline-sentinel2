@@ -4,8 +4,14 @@ Every zone keeps the published fields unchanged; these functions add clean field
 name), so a dashboard can filter on any of them. Source: Railroad Commission of Texas, "TPMS attribute definitions and
 valid codes" (rrc.texas.gov/media/vjxom1id/tpmsattributedefinitionsandvalidcodes.pdf).
 """
+import sys
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.codes import DIAMETER_BREAKS, DIAMETER_CLASSES, diameter_class  # noqa: E402,F401 (the classes, also as labels.*)
 
 # COMMODITY1 code: (commodity, service, commodity group)
 COMMODITY = {
@@ -28,8 +34,6 @@ INTERSTATE = {"Y": "Interstate", "N": "Intrastate"}
 # QUALITY_CD: the operator's estimate of positional accuracy -> (label, largest error in meters)
 QUALITY = {"E": ("Within 50 ft", 15.2), "V": ("51-300 ft", 91.4), "G": ("301-500 ft", 152.4),
            "P": ("501-1,000 ft", 304.8), "U": ("Unknown", np.nan)}
-DIAMETER_BREAKS = [0, 4.5, 8.63, 12.75, 16, 24, 36, np.inf]          # outside diameters, inches
-DIAMETER_CLASSES = ["Under 4.5 in", "4.5-8.6 in", "8.6-12.75 in", "12.75-16 in", "16-24 in", "24-36 in", "Over 36 in"]
 
 
 def add_labels(df: pd.DataFrame) -> pd.DataFrame:
@@ -43,7 +47,7 @@ def add_labels(df: pd.DataFrame) -> pd.DataFrame:
     out["commodity_group"] = known.map(lambda v: v[2] if isinstance(v, tuple) else "Unknown")
     d = pd.to_numeric(out["DIAMETER"], errors="coerce")
     out["diameter_in"] = d.where(d > 0)
-    out["diameter_class"] = pd.cut(out["diameter_in"], DIAMETER_BREAKS, labels=DIAMETER_CLASSES, right=False).astype("string").fillna("Not recorded")
+    out["diameter_class"] = diameter_class(out["diameter_in"])
     status = out["STATUS_CD"].astype("string").str.strip().str.upper()
     out["status"] = status.map(STATUS).fillna("Not recorded")
     # GeoPackage field names ignore case, so a label must never share a published field's name (INTERSTATE).

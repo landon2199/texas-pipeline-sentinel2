@@ -43,6 +43,8 @@ import shapely
 from shapely.ops import linemerge, substring
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.rings import label, ring_name, zone_id  # noqa: E402
 from labels import add_labels, station  # noqa: E402
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -129,13 +131,13 @@ def rings_for(seg: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         if keep.any():
             built = shapely.multipolygons(parts[keep], indices=which[keep])
             polys[: len(built)] = built
-        ring = gpd.GeoDataFrame({"segment_id": seg["segment_id"].values, "ring": f"{inner}-{outer} m",
+        ring = gpd.GeoDataFrame({"segment_id": seg["segment_id"].values, "ring": label(ring_name(inner, outer)),
                                  "inner_m": inner, "outer_m": outer, "comparison": outer == RINGS[-1][1]},
                                 geometry=polys, crs=seg.crs)
         out.append(ring)
     rings = pd.concat(out, ignore_index=True)
     rings = rings[rings.geometry.notna() & ~rings.geometry.is_empty]
-    rings.insert(0, "zone_id", rings["segment_id"] + "_r" + rings["inner_m"].astype(str) + "-" + rings["outer_m"].astype(str))
+    rings.insert(0, "zone_id", zone_id(rings["segment_id"], rings["inner_m"].astype(str) + "-" + rings["outer_m"].astype(str)))
     rings["area_m2"] = rings.area
     return gpd.GeoDataFrame(rings, geometry="geometry", crs=seg.crs)
 
