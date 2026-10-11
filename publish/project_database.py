@@ -19,6 +19,7 @@ Writes projects/Project database/. Usage: python project_database.py
 """
 import json
 import sqlite3
+import sys
 from pathlib import Path
 
 import geopandas as gpd
@@ -27,13 +28,16 @@ import pandas as pd
 import rasterio
 from rasterio.transform import from_origin
 
-P = Path(r"C:\mydrive\Graduate School\Courses\GEOG_392\projects")
-R = P / "outputs" / "results"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.codes import diameter_class  # noqa: E402
+from common.config import ECOREGIONS, P, PUBLISH, R, STATS  # noqa: E402
+from common.gaps import calibrated  # noqa: E402
+from common.rings import COMPARISON, suffix  # noqa: E402
+from common.stats import wmedian  # noqa: E402
+
 OUT = P / "Project database"
 GPKG = OUT / "Group10_pipeline_project.gpkg"
 CRS = 6579
-BREAKS = [0, 4.5, 8.63, 12.75, 16, 24, 36, np.inf]
-CLASSES = ["Under 4.5 in", "4.5-8.6 in", "8.6-12.75 in", "12.75-16 in", "16-24 in", "24-36 in", "Over 36 in"]
 
 SYMBOLOGY = {
     "segments": {
@@ -78,13 +82,13 @@ SYMBOLOGY = {
 
 def comparison_ndvi_wall() -> pd.Series:
     rows = []
-    for f in sorted((P / "outputs" / "geog392_zone_stats").glob("wall_*_wall_2026.csv")):
+    for f in sorted(STATS.glob("wall_*_wall_2026.csv")):
         d = pd.read_csv(f, usecols=["zone_id", "NDVI_mean", "NDVI_count"])
-        d = d[d["zone_id"].str.endswith("_r500-1000") & (d["NDVI_count"] > 0)]
+        d = d[d["zone_id"].str.endswith(suffix(COMPARISON)) & (d["NDVI_count"] > 0)]
         rows.append(d.assign(v=d["NDVI_mean"] * d["NDVI_count"]).groupby("zone_id")[["v", "NDVI_count"]].sum())
     s = pd.concat(rows)
     s = (s["v"] / s["NDVI_count"]).rename("comparison_ndvi")
-    s.index = s.index.str.replace("_r500-1000", "", regex=False)
+    s.index = s.index.str.replace(suffix(COMPARISON), "", regex=False)
     return s
 
 
@@ -95,12 +99,6 @@ def label(pct, classes):
     return out
 
 
-def wmedian(v, w):
-    o = np.argsort(v)
-    c = np.cumsum(w[o])
-    return v[o][np.searchsorted(c, c[-1] / 2)]
-
-
 def main():
     OUT.mkdir(exist_ok=True)
     if GPKG.exists():
@@ -109,10 +107,10 @@ def main():
     W = widths["cleared_width_m"]
 
     seg = gpd.read_parquet(R / "wall_to_wall_2026" / "segments.parquet").to_crs(CRS)
-    seg["diameter_class"] = pd.cut(seg["diameter_in"], BREAKS, labels=CLASSES, right=False).astype("string").fillna("Not recorded")
+    seg["diameter_class"] = diameter_class(seg["diameter_in"])
     seg = seg.join(comparison_ndvi_wall(), on="segment_id")
     seg["cleared_width_m"] = seg["diameter_class"].map(W)
-    seg["calibrated_gap"] = seg["NDVI_gap"] * 100 / seg["cleared_width_m"]
+    seg["calibrated_gap"] = calibrated(seg["NDVI_gap"], seg["diameter_class"], W)
     seg["pct_vs_nearby"] = (100 * seg["calibrated_gap"] / seg["comparison_ndvi"].clip(lower=0.05)).clip(-100, 100)
     seg["class"] = label(seg["pct_vs_nearby"].to_numpy(), SYMBOLOGY["segments"]["classes"])
     seg.loc[seg["hidden_until_photo_check"], "class"] = "Hidden until the photo check"
@@ -146,7 +144,7 @@ def main():
     cal = pd.read_csv(R / "clearing_calibration" / "calibrated.csv")
     eco_vals = cal[(cal["scope"] == "ecoregion") & (cal["measure"] == "same land cover")].rename(
         columns={"group": "ecoregion", "pct_of_comparison_ndvi": "pct_vs_nearby", "lo95_pct": "pct_lo95", "hi95_pct": "pct_hi95"})
-    eco = gpd.read_file(P / "data" / "statewide" / "ecoregions_epa_l3_texas.gpkg").to_crs(CRS)
+    eco = gpd.read_file(ECOREGIONS).to_crs(CRS)
     name = "us_l3name" if "us_l3name" in eco else [c for c in eco.columns if "name" in c.lower()][0]
     eco = eco.dissolve(name, as_index=False).rename(columns={name: "ecoregion"})
     eco = eco.merge(eco_vals[["ecoregion", "band_gap", "calibrated_gap", "pct_vs_nearby", "pct_lo95", "pct_hi95"]], on="ecoregion", how="left")
@@ -154,13 +152,13 @@ def main():
     eco[["ecoregion", "band_gap", "calibrated_gap", "pct_vs_nearby", "pct_lo95", "pct_hi95", "class", "geometry"]].to_file(
         GPKG, layer="ecoregions", driver="GPKG")
 
-    pub = P / "outputs" / "publish" / "data"
+    pub = PUBLISH / "data"
     comp9 = pd.read_csv(R / "clearing_calibration" / "comparison_ndvi.csv", index_col="segment_id")["comparison_ndvi"]
     smp = gpd.read_parquet(pub / "corridor_segments.parquet").to_crs(CRS)
-    smp["diameter_class"] = pd.cut(smp["diameter_in"], BREAKS, labels=CLASSES, right=False).astype("string").fillna("Not recorded")
+    smp["diameter_class"] = diameter_class(smp["diameter_in"])
     smp["cleared_width_m"] = smp["diameter_class"].map(W)
     smp["comparison_ndvi"] = smp["segment_id"].map(comp9)
-    smp["calibrated_gap"] = smp["NDVI_gap_same_lc"] * 100 / smp["cleared_width_m"]
+    smp["calibrated_gap"] = calibrated(smp["NDVI_gap_same_lc"], smp["diameter_class"], W)
     smp["pct_vs_nearby"] = (100 * smp["calibrated_gap"] / smp["comparison_ndvi"].clip(lower=0.05)).clip(-100, 100)
     smp["class"] = label(smp["pct_vs_nearby"].to_numpy(), SYMBOLOGY["segments"]["classes"])
     smp.drop(columns=["bbox"], errors="ignore").to_file(GPKG, layer="sample_9springs", driver="GPKG")

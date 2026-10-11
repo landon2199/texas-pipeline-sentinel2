@@ -15,6 +15,7 @@ Usage: python catalog.py
 import datetime as dt
 import json
 import shutil
+import sys
 from pathlib import Path
 
 import geopandas as gpd
@@ -26,9 +27,11 @@ from pystac.extensions.table import TableExtension
 from pygeometa.core import read_mcf
 from pygeometa.schemas.iso19139 import ISO19139OutputSchema
 
-P = Path(r"C:\mydrive\Graduate School\Courses\GEOG_392\projects")
-R, Z = P / "outputs" / "results", P / "outputs" / "zones"
-OUT = P / "outputs" / "publish"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.config import CORRIDOR, CORRIDOR_SUPPLEMENT, P, PUBLISH, R, S, SAMPLE, SUPPLEMENT  # noqa: E402
+from common.gaps import piece_gaps  # noqa: E402
+
+OUT = PUBLISH
 TODAY = dt.date.today().isoformat()
 TEAM = "GEOG 392/676 Group 10, Department of Geography, Texas A&M University"
 SPRINGS = ("2018-03-01", "2026-04-30")
@@ -42,35 +45,32 @@ SOURCES = ("Railroad Commission of Texas pipeline layer (downloaded 2026-10-06);
 
 def pooled_gaps() -> pd.DataFrame:
     """Each piece's median 0-50 m gap over the nine springs, per index, as coverage_estimate.py uses it."""
-    keep = ["segment_id", "ring", "index", "diff_all", "diff_same_lc"]
-    out = []
-    for f in (R / "corridor_sample_v1_9springs_pooled" / "segment_spring.csv", R / "corridor_supplement_9springs" / "segment_spring.csv"):
-        d = pd.concat(c[(c["ring"] == "0-50 m") & c["index"].isin(["NDVI", "NDRE", "NDMI"])] for c in pd.read_csv(f, usecols=keep, chunksize=500_000))
-        out.append(d.groupby(["segment_id", "index"])[["diff_same_lc", "diff_all"]].median())
+    out = [piece_gaps(f, ["segment_id", "index"], indices=["NDVI", "NDRE", "NDMI"]).set_index(["segment_id", "index"])
+           for f in (CORRIDOR / "segment_spring.csv", CORRIDOR_SUPPLEMENT / "segment_spring.csv")]
     g = pd.concat(out).unstack("index")
     g.columns = [f"{i}_gap_{'same_lc' if m == 'diff_same_lc' else 'all'}" for m, i in g.columns]
     return g.reset_index()
 
 
 def corridor_segments() -> gpd.GeoDataFrame:
-    main = gpd.read_file(Z / "sample_v1" / "sample.gpkg", layer="segments", columns=ATTRS + ["stratum", "weight"]).assign(frame="main")
-    supp = gpd.read_file(Z / "sample_v2_supplement" / "supplement.gpkg", layer="segments", columns=ATTRS + ["stratum", "weight", "frame"])
+    main = gpd.read_file(SAMPLE / "sample.gpkg", layer="segments", columns=ATTRS + ["stratum", "weight"]).assign(frame="main")
+    supp = gpd.read_file(SUPPLEMENT / "supplement.gpkg", layer="segments", columns=ATTRS + ["stratum", "weight", "frame"])
     seg = pd.concat([main, supp], ignore_index=True)
     seg["km_represented"] = seg["weight"] * np.where(seg["frame"] == "short", seg["piece_m"] / 1000, 1.0)
     return gpd.GeoDataFrame(seg.merge(pooled_gaps(), on="segment_id", how="left"), crs=main.crs)
 
 
 def hot_spots() -> gpd.GeoDataFrame:
-    seg = gpd.read_file(Z / "sample_v1" / "sample.gpkg", layer="segments", columns=ATTRS)
+    seg = gpd.read_file(SAMPLE / "sample.gpkg", layer="segments", columns=ATTRS)
     hs = pd.read_csv(R / "hot_spots_by_spring" / "segments.csv").rename(columns={"cold": "springs_cold", "hot": "springs_hot",
                                                                                  "class": "pattern", "tau": "trend_tau"})
     return seg.merge(hs, on="segment_id", how="inner")
 
 
 def spill_events() -> gpd.GeoDataFrame:
-    sp = gpd.read_file(Z / "statewide" / "spills_statewide.gpkg", layer="spills_matched",
+    sp = gpd.read_file(S / "spills_statewide.gpkg", layer="spills_matched",
                        columns=["spill_id", "report_number", "date", "barrels", "commodity", "cause", "ecoregion"])
-    st = pd.read_csv(Z / "statewide" / "spill_stations.csv", usecols=["spill_id", "route", "measure_m", "station", "offset_m",
+    st = pd.read_csv(S / "spill_stations.csv", usecols=["spill_id", "route", "measure_m", "station", "offset_m",
                                                                        "side", "measure_along", "location_accuracy"])
     return sp.merge(st, on="spill_id", how="left")
 
@@ -126,7 +126,7 @@ if list(R.glob("wall_to_wall_*/segments.parquet")):
 
 def quality(name: str, gdf) -> dict:
     """ISO 19157 data quality elements, in words, from the project's own checks."""
-    cov = pd.read_csv(Z / "statewide" / "coverage_statewide.csv")
+    cov = pd.read_csv(S / "coverage_statewide.csv")
     total = cov["km"].sum()
     covered = cov.loc[cov["kept"], "km"].sum() + 181_260
     valid = float(shapely.is_valid(np.asarray(gdf.geometry.array)).mean()) if len(gdf) else 1.0

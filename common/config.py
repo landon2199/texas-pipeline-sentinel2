@@ -14,6 +14,7 @@ Z = P / "outputs" / "zones"                       # zones, samples and their upl
 S = Z / "statewide"                               # the statewide zones (one GeoPackage per ecoregion), stations, spills
 STATS = P / "outputs" / "geog392_zone_stats"      # the Earth Engine exports, as collected from Drive
 AGENT = P / "outputs" / "agent"                   # the tables the agents and the dashboard read
+PUBLISH = P / "outputs" / "publish"               # publishable layers, metadata and the STAC catalog (publish/)
 ECOREGIONS = P / "data" / "statewide" / "ecoregions_epa_l3_texas.gpkg"
 
 SAMPLE = Z / "sample_v1"                          # the main sample (draw_sample.py)
