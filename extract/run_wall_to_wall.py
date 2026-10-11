@@ -16,7 +16,9 @@ from pathlib import Path
 import ee
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import part2  # noqa: E402
+from common.config import DRIVE_FOLDER, EE_PROJECT  # noqa: E402
 from run_springs import month_used_hours, read_log, write_log  # noqa: E402
 
 COLUMNS = ["zone_id", "landcover", "spring", "NDVI_mean", "NDMI_mean", "NDVI_count", "NDMI_count"]
@@ -53,8 +55,8 @@ if __name__ == "__main__":
     ap.add_argument("--springs", nargs="+", type=int, default=list(range(2018, 2027)))
     ap.add_argument("--only-rings", nargs="*", default=["0-50", "500-1000"], help="ring labels to keep (zone_id suffixes)")
     ap.add_argument("--name", help="job name prefix (default: the asset folder name)")
-    ap.add_argument("--drive-folder", default="geog392_zone_stats")
-    ap.add_argument("--project", default="research-476723")
+    ap.add_argument("--drive-folder", default=DRIVE_FOLDER)
+    ap.add_argument("--project", default=EE_PROJECT)
     a = ap.parse_args()
     ee.Initialize(project=a.project)
     main(a)

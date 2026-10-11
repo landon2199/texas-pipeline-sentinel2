@@ -12,7 +12,9 @@ from pathlib import Path
 import ee
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import part2  # noqa: E402
+from common.config import DRIVE_FOLDER, EE_ASSETS, EE_PROJECT  # noqa: E402
 from run_springs import month_used_hours, read_log, write_log  # noqa: E402
 
 COLUMNS = (["zone_id", "landcover", "date", "image", "orbit", "tile", "spacecraft", "sun_zenith"]
@@ -47,10 +49,10 @@ def main(a):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--zones", default="projects/research-476723/assets/geog392/spills_2010")
+    ap.add_argument("--zones", default=f"{EE_ASSETS}/spills_2010")
     ap.add_argument("--springs", nargs="+", type=int, default=list(range(2008, 2027)))
-    ap.add_argument("--drive-folder", default="geog392_zone_stats")
-    ap.add_argument("--project", default="research-476723")
+    ap.add_argument("--drive-folder", default=DRIVE_FOLDER)
+    ap.add_argument("--project", default=EE_PROJECT)
     a = ap.parse_args()
     ee.Initialize(project=a.project)
     main(a)

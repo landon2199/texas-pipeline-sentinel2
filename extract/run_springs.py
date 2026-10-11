@@ -28,10 +28,12 @@ from pathlib import Path
 import ee
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import part2  # noqa: E402
+from common.config import DRIVE_FOLDER, EE_ASSETS, EE_PROJECT, JOBS_LOG  # noqa: E402
 from run_part2 import columns, region_geometry  # noqa: E402
 
-LOG = Path(__file__).resolve().parent / "jobs_log.csv"
+LOG = JOBS_LOG
 FIELDS = ["name", "task_id", "spring", "measure", "zones", "submitted", "state", "eecu_hours"]
 # EECU-hours per spring, measured on spring 2025 (Oct 7): sample_v1 15.8, spills_v1 at 10 m 13.0, temperature 3.8
 EST = {"sample_per_image": 16.0, "spills_per_image": 13.0, "lst": 3.8, "drought": 0.1, "fixed": 0.9}
@@ -157,12 +159,12 @@ def main(a):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--sample", help="asset folder of the sample's rings, e.g. projects/research-476723/assets/geog392/sample_v1")
+    ap.add_argument("--sample", help=f"asset folder of the sample's rings, e.g. {EE_ASSETS}/sample_v1")
     ap.add_argument("--spills", help="asset folder of the spill zones")
     ap.add_argument("--springs", nargs="+", type=int, default=[2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2026])
     ap.add_argument("--budget", type=float, default=140, help="EECU-hours this month not to pass (Community tier: 150)")
-    ap.add_argument("--drive-folder", default="geog392_zone_stats")
-    ap.add_argument("--project", default="research-476723")
+    ap.add_argument("--drive-folder", default=DRIVE_FOLDER)
+    ap.add_argument("--project", default=EE_PROJECT)
     ap.add_argument("--status", action="store_true", help="refresh the job log and stop")
     ap.add_argument("--sample-only", action="store_true",
                     help="only the sample's image-by-image values and fixed values (e.g. the coverage supplement)")

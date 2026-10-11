@@ -16,7 +16,9 @@ from pathlib import Path
 import ee
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import part2  # noqa: E402
+from common.config import DRIVE_FOLDER, EE_ASSETS, EE_PROJECT  # noqa: E402
 from run_springs import month_used_hours, read_log, write_log  # noqa: E402
 
 SPRINGS = list(range(2018, 2027))
@@ -64,9 +66,9 @@ def main(a):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--zones", default="projects/research-476723/assets/geog392/sample_v1_b50")
-    ap.add_argument("--drive-folder", default="geog392_zone_stats")
-    ap.add_argument("--project", default="research-476723")
+    ap.add_argument("--zones", default=f"{EE_ASSETS}/sample_v1_b50")
+    ap.add_argument("--drive-folder", default=DRIVE_FOLDER)
+    ap.add_argument("--project", default=EE_PROJECT)
     a = ap.parse_args()
     ee.Initialize(project=a.project)
     main(a)
