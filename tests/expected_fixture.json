@@ -1,0 +1,6 @@
+{
+  "fixture_weighted_median_band_gap_ndvi_0_50": -0.010447,
+  "fixture_weighted_median_calibrated_gap_ndvi": -0.03805887712621569,
+  "fixture_segments": 80,
+  "rule": "per segment: median over springs of diff_same_lc at ring '0-50 m'; weighted median with design weights; calibrated = gap x 100 / cleared width of the segment's diameter class"
+}

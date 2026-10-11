@@ -1,0 +1,18 @@
+{
+  "band_gap_all_land_pipe_ndvi": -0.0060249471317899,
+  "band_gap_main_sample_ndvi_all_springs": -0.0079593446413302,
+  "calibrated_gap_all_land_pipe_ndvi": -0.0235557097857778,
+  "calibrated_pct_all_land_pipe": -6.615446999382401,
+  "cleared_width_m": {
+    "Under 4.5 in": 21.349,
+    "4.5-8.6 in": 25.284,
+    "8.6-12.75 in": 25.998,
+    "12.75-16 in": 27.45,
+    "16-24 in": 25.387,
+    "24-36 in": 27.45,
+    "Over 36 in": 39.118,
+    "Not recorded": 27.45
+  },
+  "footprint_km2_all_land_pipe": 14626.032971443816,
+  "tolerance": "point estimates must match to 1e-9; bootstrap intervals may move if the random draws change order"
+}
