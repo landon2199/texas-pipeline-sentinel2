@@ -12,40 +12,35 @@ Writes outputs/results/man_made_check/SUMMARY.md and segments.csv.
 Usage: python man_made_check.py [--index NDVI] [--boot 500]
 """
 import argparse
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-P = Path(r"C:\mydrive\Graduate School\Courses\GEOG_392\projects")
-MM = P / "outputs" / "geog392_zone_stats" / "sample_v1_b50_and_spills_v1_man_made.csv"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.config import AGENT, R, STATS  # noqa: E402
+from common.rings import BAND, COMPARISON, split_zone_ids  # noqa: E402
+from common.stats import bootstrap, strata_groups, wmedian  # noqa: E402
 
-
-def wmedian(v, w):
-    o = np.argsort(v)
-    c = np.cumsum(w[o])
-    return v[o][np.searchsorted(c, c[-1] / 2)]
+MM = STATS / "sample_v1_b50_and_spills_v1_man_made.csv"
 
 
 def estimate(d: pd.DataFrame, rng, boot: int):
     v, w = d["gap"].to_numpy(), d["weight"].to_numpy()
     est = wmedian(v, w)
-    groups = [g.index.to_numpy() for _, g in d.reset_index(drop=True).groupby("stratum")]
-    vals = []
-    for _ in range(boot):
-        idx = np.concatenate([rng.choice(g, len(g)) for g in groups])
-        vals.append(wmedian(v[idx], w[idx]))
-    return est, np.percentile(vals, 2.5), np.percentile(vals, 97.5), len(d), w.sum()
+    draws = bootstrap(lambda i: wmedian(v[i], w[i]), strata_groups(d["stratum"]), boot, rng)
+    return est, np.percentile(draws, 2.5), np.percentile(draws, 97.5), len(d), w.sum()
 
 
 def main(a):
     rng = np.random.default_rng(392)
     mm = pd.read_csv(MM)
     mm = mm[~mm["zone_id"].str.startswith("S")].copy()            # sample zones only (spill zones start with S)
-    mm[["segment_id", "ring"]] = mm["zone_id"].str.rsplit("_r", n=1, expand=True)
+    mm[["segment_id", "ring"]] = split_zone_ids(mm["zone_id"])
     mm["man_made"] = mm[["road", "developed", "energy"]].sum(axis=1)
-    band, ring = mm[mm["ring"] == "0-50"].set_index("segment_id"), mm[mm["ring"] == "500-1000"].set_index("segment_id")
-    s = pd.read_parquet(P / "outputs" / "agent" / "segment_springs.parquet",
+    band, ring = mm[mm["ring"] == BAND].set_index("segment_id"), mm[mm["ring"] == COMPARISON].set_index("segment_id")
+    s = pd.read_parquet(AGENT / "segment_springs.parquet",
                         columns=["segment_id", "year", "ring", "index", "diff_same_lc", "stratum", "weight"])
     s = s[(s["index"] == a.index) & (s["ring"] == "0-50 m")].dropna(subset=["diff_same_lc"])
     seg = s.groupby("segment_id").agg(gap=("diff_same_lc", "median"), stratum=("stratum", "first"), weight=("weight", "first"))
@@ -84,5 +79,5 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--index", default="NDVI")
     ap.add_argument("--boot", type=int, default=500)
-    ap.add_argument("--out", type=Path, default=P / "outputs" / "results" / "man_made_check")
+    ap.add_argument("--out", type=Path, default=R / "man_made_check")
     main(ap.parse_args())

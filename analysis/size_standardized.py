@@ -12,25 +12,25 @@ Writes outputs/results/size_standardized/: estimates.csv and SUMMARY.md.
 Usage: python size_standardized.py [--ring "0-50 m"] [--indices NDVI NDRE NDMI] [--boot 500]
 """
 import argparse
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-P = Path(r"C:\mydrive\Graduate School\Courses\GEOG_392\projects")
-SRC = P / "outputs" / "results" / "corridor_sample_v1_9springs_pooled" / "segment_spring.csv"
-OUT = P / "outputs" / "results" / "size_standardized"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.codes import DIAMETER_CLASSES  # noqa: E402
+from common.config import CORRIDOR, R  # noqa: E402
+from common.gaps import piece_gaps  # noqa: E402
+from common.stats import bootstrap, strata_groups, wmedian  # noqa: E402
+
+SRC = CORRIDOR / "segment_spring.csv"
+OUT = R / "size_standardized"
 SCOPES = ["ecoregion", "commodity_group", "service", "status", "location_accuracy"]
-SIZE = {"Under 4.5 in": "under 8.6 in", "4.5-8.6 in": "under 8.6 in", "8.6-12.75 in": "8.6-16 in",
-        "12.75-16 in": "8.6-16 in", "16-24 in": "over 16 in", "24-36 in": "over 16 in", "Over 36 in": "over 16 in"}
 CLASSES = ["under 8.6 in", "8.6-16 in", "over 16 in"]
+# the seven diameter classes in the three size classes ('Not recorded' is in none)
+SIZE = dict(zip(DIAMETER_CLASSES, [CLASSES[0]] * 2 + [CLASSES[1]] * 2 + [CLASSES[2]] * 3))
 MIN_CELL = 15
-
-
-def wmedian(v, w):
-    o = np.argsort(v)
-    c = np.cumsum(w[o])
-    return v[o][np.searchsorted(c, c[-1] / 2)]
 
 
 def estimates(v, w, size, share):
@@ -46,10 +46,8 @@ def estimates(v, w, size, share):
 
 def main(a):
     rng = np.random.default_rng(392)
-    cols = ["segment_id", "ring", "index", "diff_same_lc", "stratum", "weight", "diameter_class"] + SCOPES
-    d = pd.concat(c[(c["ring"] == a.ring) & c["index"].isin(a.indices)] for c in pd.read_csv(SRC, usecols=cols, chunksize=500_000))
-    seg = d.groupby(["segment_id", "index"] + [c for c in cols if c not in ("segment_id", "ring", "index", "diff_same_lc")],
-                    as_index=False)["diff_same_lc"].median().rename(columns={"diff_same_lc": "gap"})
+    seg = piece_gaps(SRC, ["segment_id", "index", "stratum", "weight", "diameter_class"] + SCOPES, a.ring, a.indices,
+                     ["diff_same_lc"]).rename(columns={"diff_same_lc": "gap"})
     seg["size"] = seg["diameter_class"].map(SIZE)
     seg = seg.dropna(subset=["size", "gap"])           # 'Not recorded' diameters can't be standardized
     rows = []
@@ -60,12 +58,8 @@ def main(a):
                 v, w = g["gap"].to_numpy(float), g["weight"].to_numpy(float)
                 size = g["size"].map({c: k for k, c in enumerate(CLASSES)}).to_numpy()
                 raw, std = estimates(v, w, size, share)
-                strata = [np.flatnonzero(g["stratum"].to_numpy() == st) for st in g["stratum"].unique()]
-                draws = []
-                for _ in range(a.boot):
-                    i = np.concatenate([st[rng.integers(0, len(st), len(st))] for st in strata])
-                    draws.append(estimates(v[i], w[i], size[i], share))
-                draws = np.array(draws)
+                draws = np.array(bootstrap(lambda i: estimates(v[i], w[i], size[i], share),
+                                           strata_groups(g["stratum"], sort=False), a.boot, rng))
                 ci = np.nanpercentile(draws, [2.5, 97.5], axis=0) if len(draws) else np.full((2, 2), np.nan)
                 rows.append({"index": idx, "scope": scope, "group": group, "segments": len(g),
                              "share_over_16in": float(w[size == 2].sum() / w.sum()),

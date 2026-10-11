@@ -10,35 +10,27 @@ Writes outputs/results/coverage_estimate/SUMMARY.md and estimates.csv.
 Usage: python coverage_estimate.py [--boot 500]
 """
 import argparse
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-P = Path(r"C:\mydrive\Graduate School\Courses\GEOG_392\projects")
-R = P / "outputs" / "results"
-COLS = ["segment_id", "year", "ring", "index", "diff_all", "diff_same_lc", "stratum", "weight"]
-
-
-def wmedian(v, w):
-    o = np.argsort(v)
-    c = np.cumsum(w[o])
-    return v[o][np.searchsorted(c, c[-1] / 2)]
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.config import CORRIDOR, CORRIDOR_SUPPLEMENT, R, SUPPLEMENT  # noqa: E402
+from common.gaps import piece_gaps  # noqa: E402
+from common.stats import bootstrap, strata_groups, wmedian  # noqa: E402
 
 
 def per_piece(path: Path, indices) -> pd.DataFrame:
-    parts = []
-    for chunk in pd.read_csv(path, usecols=COLS, chunksize=500_000):
-        parts.append(chunk[(chunk["ring"] == "0-50 m") & chunk["index"].isin(indices)])
-    d = pd.concat(parts)
-    return d.groupby(["segment_id", "index", "stratum", "weight"], as_index=False)[["diff_all", "diff_same_lc"]].median()
+    return piece_gaps(path, ["segment_id", "index", "stratum", "weight"], indices=indices, measures=["diff_all", "diff_same_lc"])
 
 
 def main(a):
     rng = np.random.default_rng(392)
-    main_ = per_piece(R / "corridor_sample_v1_9springs_pooled" / "segment_spring.csv", a.indices).assign(frame="main", km=1.0)
-    supp = per_piece(R / "corridor_supplement_9springs" / "segment_spring.csv", a.indices)
-    info = pd.read_csv(P / "outputs" / "zones" / "sample_v2_supplement" / "sample_segments.csv", usecols=["segment_id", "frame", "piece_m"])
+    main_ = per_piece(CORRIDOR / "segment_spring.csv", a.indices).assign(frame="main", km=1.0)
+    supp = per_piece(CORRIDOR_SUPPLEMENT / "segment_spring.csv", a.indices)
+    info = pd.read_csv(SUPPLEMENT / "sample_segments.csv", usecols=["segment_id", "frame", "piece_m"])
     supp = supp.merge(info, on="segment_id", how="left").assign(km=lambda x: x["piece_m"] / 1000).drop(columns="piece_m")
     d = pd.concat([main_, supp], ignore_index=True)
     d["w_km"] = d["weight"] * d["km"]
@@ -49,11 +41,10 @@ def main(a):
             for measure in ("diff_same_lc", "diff_all"):
                 p = d[(d["index"] == idx) & ((d["frame"] == frame) | (frame == "all land pipe"))].dropna(subset=[measure])
                 v, w = p[measure].to_numpy(float), p["w_km"].to_numpy(float)
-                groups = [g.to_numpy() for _, g in p.reset_index(drop=True).groupby("boot_stratum").groups.items()]
-                boot = [wmedian(v[i], w[i]) for i in (np.concatenate([rng.choice(g, len(g)) for g in groups]) for _ in range(a.boot))]
+                draws = bootstrap(lambda i: wmedian(v[i], w[i]), strata_groups(p["boot_stratum"]), a.boot, rng)
                 rows.append({"index": idx, "frame": frame, "measure": "same land cover" if measure == "diff_same_lc" else "all ground",
                              "pieces": len(p), "km_represented": w.sum(), "gap": wmedian(v, w),
-                             "lo95": np.percentile(boot, 2.5), "hi95": np.percentile(boot, 97.5)})
+                             "lo95": np.percentile(draws, 2.5), "hi95": np.percentile(draws, 97.5)})
     t = pd.DataFrame(rows)
     out = R / "coverage_estimate"
     out.mkdir(parents=True, exist_ok=True)

@@ -22,27 +22,28 @@ Usage: python corridor.py --results <folder of per-image CSVs> --pattern "*per_i
 """
 import argparse
 import re
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-COMPARISON = "500-1000"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.rings import COMPARISON, by_distance, label, pooling, split_zone_ids, zone_id  # noqa: E402
+from common.stats import bootstrap, strata_groups, wmedian  # noqa: E402
+
 INDICES_ALL = ["NDVI", "NDMI", "SAVI", "MNDWI", "NDRE", "S2REP", "BSI"]
 
 
 def rings_in(d: pd.DataFrame) -> list[str]:
     """Every ring band in the data except the comparison ring, nearest first (works for 4 rings or ten 50 m bands)."""
-    return sorted(set(d["ring"]) - {COMPARISON}, key=lambda r: int(r.split("-")[0]))
+    return by_distance(set(d["ring"]) - {COMPARISON})
 
 
 def pool_rings(d: pd.DataFrame, groups: list[str]) -> pd.DataFrame:
     """Rebuild wide rings from narrow bands, e.g. "100-250=100-150,150-200,200-250": each index's mean is pooled with its
     pixel counts, per segment, land cover class and pass, so a wide ring is exactly the ground of its bands."""
-    rename = {}
-    for g in groups:
-        wide, parts = g.split("=")
-        rename.update({p: wide for p in parts.split(",")})
+    rename = pooling(groups)
     d = d.assign(ring=d["ring"].replace(rename))
     key = ["segment_id", "ring", "landcover", "date", "orbit", "year"]
     idx = [i for i in INDICES_ALL if f"{i}_mean" in d]
@@ -52,8 +53,8 @@ def pool_rings(d: pd.DataFrame, groups: list[str]) -> pd.DataFrame:
         out[f"{i}_mean"] = out[f"{i}_w"] / out[f"{i}_count"]
     out["doy"] = agg["doy"].first()
     out = out.drop(columns=[f"{i}_w" for i in idx]).reset_index()
-    out["zone_id"] = out["segment_id"] + "_r" + out["ring"]
-    print(f"pooled bands into wider rings: {sorted(set(rename.values()), key=lambda r: int(r.split('-')[0]))}")
+    out["zone_id"] = zone_id(out["segment_id"], out["ring"])
+    print(f"pooled bands into wider rings: {by_distance(set(rename.values()))}")
     return out
 GROUPS = ["ecoregion", "commodity_group", "service", "diameter_class", "status", "location_accuracy"]
 KEY = ["segment_id", "year", "date", "orbit"]
@@ -83,7 +84,7 @@ def load_results(folder: Path, pattern: str, indices=None, files=None) -> pd.Dat
     if not files:
         raise SystemExit(f"no files match {pattern} in {folder}")
     d = pd.concat([read_file(f, indices) for f in files], ignore_index=True)
-    d[["segment_id", "ring"]] = d["zone_id"].str.rsplit("_r", n=1, expand=True)
+    d[["segment_id", "ring"]] = split_zone_ids(d["zone_id"])
     d["year"] = d["date"].str[:4].astype(int)
     d["doy"] = pd.to_datetime(d["date"]).dt.dayofyear
     # 1. repeats from overlapping tiles: one tile image per segment and pass
@@ -118,16 +119,10 @@ def paired(d: pd.DataFrame, idx: str, min_px: int, rings: list[str]) -> pd.DataF
         g = per.groupby(level=["segment_id", "year"])
         out = pd.DataFrame({"diff_all": g["diff_all"].median(), "diff_same_lc": g["diff_same_lc"].median(),
                             "passes": g["diff_all"].size(), "doy_median": g["doy"].median()}).reset_index()
-        out.insert(2, "ring", f"{r} m")
+        out.insert(2, "ring", label(r))
         out.insert(3, "index", idx)
         rows.append(out)
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
-
-
-def wmedian(v: np.ndarray, w: np.ndarray) -> float:
-    o = np.argsort(v)
-    c = np.cumsum(w[o])
-    return float(v[o][np.searchsorted(c, c[-1] / 2)])
 
 
 def summarize(v, w, strata, boot, rng):
@@ -136,14 +131,10 @@ def summarize(v, w, strata, boot, rng):
     v, w, strata = v[ok], w[ok], strata[ok]
     if len(v) < 3:
         return len(v), np.nan, np.nan, np.nan
-    groups = [np.flatnonzero(strata == s) for s in np.unique(strata)]
     est = wmedian(v, w)
     if boot == 0:
         return len(v), est, np.nan, np.nan
-    draws = []
-    for _ in range(boot):
-        pick = np.concatenate([g[rng.integers(0, len(g), len(g))] for g in groups])
-        draws.append(wmedian(v[pick], w[pick]))
+    draws = bootstrap(lambda i: wmedian(v[i], w[i]), strata_groups(strata), boot, rng)
     return len(v), est, float(np.quantile(draws, 0.025)), float(np.quantile(draws, 0.975))
 
 
@@ -202,7 +193,7 @@ def main(a):
     head = res[(res["springs"] == "all springs") & (res["scope"] == "statewide")].copy()
     head["result"] = head.apply(lambda x: f"{x['weighted_median']:+.4f} [{x['lo95']:+.4f}, {x['hi95']:+.4f}] n={x['segments']}", axis=1)
     table = head.pivot_table(index=["ring"], columns=["index", "measure"], values="result", aggfunc="first")
-    table = table.reindex([f"{r} m" for r in rings if f"{r} m" in table.index])      # distance order, not alphabetical
+    table = table.reindex([label(r) for r in rings if label(r) in table.index])      # distance order, not alphabetical
     acc = res[(res["springs"] == "all springs") & (res["scope"] == "location_accuracy") & (res["ring"] == "0-50 m")
               & (res["measure"] == "same land cover")]
     lines = ["# Corridor results: ring minus its own 500-1,000 m comparison ring", "",

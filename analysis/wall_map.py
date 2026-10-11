@@ -25,20 +25,14 @@ import rasterio
 from rasterio.transform import from_origin
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.config import CORRIDOR, ECOREGIONS, R, S, STATS  # noqa: E402
+from common.gaps import wmedian_of  # noqa: E402
 from strip_diagram import gaps  # noqa: E402
 
-P = Path(r"C:\mydrive\Graduate School\Courses\GEOG_392\projects")
-S = P / "outputs" / "zones" / "statewide"
-ZS = P / "outputs" / "geog392_zone_stats"
 COLS = ["segment_id", "line_uid", "commodity", "service", "diameter_in", "status", "location_accuracy", "ecoregion",
         "piece_m", "start_m", "end_m", "has_comparison"]
 CELL = 1000
-
-
-def wmedian(v, w):
-    o = np.argsort(v)
-    c = np.cumsum(w[o])
-    return v[o][np.searchsorted(c, c[-1] / 2)]
 
 
 def main(a):
@@ -58,7 +52,7 @@ def main(a):
             near = (seg["line_uid"] == r.route) & (seg["end_m"] >= r.measure_m - 1000) & (seg["start_m"] <= r.measure_m + 1000)
             seg.loc[near, "hidden_until_photo_check"] = True
         seg.loc[seg["hidden_until_photo_check"], ["NDVI_gap", "NDMI_gap"]] = np.nan
-    out = a.out or P / "outputs" / "results" / f"wall_to_wall_{a.spring}"
+    out = a.out or R / f"wall_to_wall_{a.spring}"
     out.mkdir(parents=True, exist_ok=True)
     seg.to_crs(4326).to_parquet(out / "segments.parquet", schema_version="1.1.0", write_covering_bbox=True, compression="zstd")
 
@@ -84,7 +78,7 @@ def main(a):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.collections import LineCollection
-    tx = gpd.read_file(P / "data" / "statewide" / "ecoregions_epa_l3_texas.gpkg").to_crs(seg.crs)
+    tx = gpd.read_file(ECOREGIONS).to_crs(seg.crs)
     fig, ax = plt.subplots(figsize=(8, 7.4), dpi=220)
     tx.boundary.plot(ax=ax, color="#bdbdbd", linewidth=0.3)
     segs = [np.asarray(gm.coords)[:, :2] for gm in ok.geometry]
@@ -103,7 +97,7 @@ def main(a):
     plt.close(fig)
 
     with_comp = ok[ok["has_comparison"].astype(bool)]
-    s = pd.read_csv(P / "outputs" / "results" / "corridor_sample_v1_9springs_pooled" / "statewide.csv")
+    s = pd.read_csv(CORRIDOR / "statewide.csv")
     s = s[(s["ring"] == "0-50 m") & (s["index"] == "NDVI") & (s["measure"] == "same land cover")
           & (s["springs"].astype(str) == str(a.spring))]
     st = s[s["scope"] == "statewide"]
@@ -111,14 +105,14 @@ def main(a):
     s = s[s["scope"] == "ecoregion"]
     sample = {r.group: f"{r.weighted_median:+.4f} [{r.lo95:+.4f}, {r.hi95:+.4f}]" if pd.notna(r.lo95) else f"{r.weighted_median:+.4f}"
               for r in s.itertuples()}
-    eco = with_comp.groupby("ecoregion").apply(lambda x: wmedian(x["NDVI_gap"].to_numpy(), x["piece_m"].to_numpy()), include_groups=False)
+    eco = with_comp.groupby("ecoregion").apply(lambda x: wmedian_of(x, "NDVI_gap", "piece_m"), include_groups=False)
     lines = [f"# Wall-to-wall map, spring {a.spring} ({pd.Timestamp.today():%Y-%m-%d})", "",
              f"Regions measured: {len(regions)} of 11 ({', '.join(regions)}).",
              f"Segments with a gap: {len(ok):,} ({km.sum():,.0f} km); without enough pixels: {int(seg['NDVI_gap'].isna().sum() - seg['hidden_until_photo_check'].sum()):,}; "
              f"hidden near spills: {int(seg['hidden_until_photo_check'].sum()):,}.", "",
              f"Length-weighted median 0-50 m NDVI gap, segments with a clean comparison ring: "
-             f"**{wmedian(with_comp['NDVI_gap'].to_numpy(), with_comp['piece_m'].to_numpy()):+.4f}** "
-             f"(n={len(with_comp):,}); NDMI {wmedian(with_comp['NDMI_gap'].dropna().to_numpy(), with_comp.dropna(subset=['NDMI_gap'])['piece_m'].to_numpy()):+.4f}. "
+             f"**{wmedian_of(with_comp, 'NDVI_gap', 'piece_m'):+.4f}** "
+             f"(n={len(with_comp):,}); NDMI {wmedian_of(with_comp, 'NDMI_gap', 'piece_m'):+.4f}. "
              f"The image-by-image sample's statewide estimate for the same frame and spring is {state}. "
              "The composite measure is for the map; the sample is the test.", "",
              "| Ecoregion | Wall-to-wall: median NDVI gap (length-weighted) | Sample, image by image, same spring [95% CI] |",
@@ -136,6 +130,6 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--spring", type=int, default=2026)
     ap.add_argument("--unblind", action="store_true", help="show the gap near spills (only after the photo check)")
-    ap.add_argument("--tables", type=Path, default=ZS, help="folder with the wall-to-wall CSVs")
+    ap.add_argument("--tables", type=Path, default=STATS, help="folder with the wall-to-wall CSVs")
     ap.add_argument("--out", type=Path, help="output folder (default outputs/results/wall_to_wall_<spring>)")
     main(ap.parse_args())

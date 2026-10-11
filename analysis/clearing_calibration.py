@@ -17,6 +17,7 @@ Writes outputs/results/clearing_calibration/: widths.csv, calibrated.csv, footpr
 Usage: python clearing_calibration.py [--boot 500]
 """
 import argparse
+import sys
 from pathlib import Path
 
 import geopandas as gpd
@@ -24,27 +25,24 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-P = Path(r"C:\mydrive\Graduate School\Courses\GEOG_392\projects")
-R = P / "outputs" / "results"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.codes import DIAMETER_CLASSES, NOT_RECORDED  # noqa: E402
+from common.config import CORRIDOR, CORRIDOR_SUPPLEMENT, P, R, SAMPLE, STATS, SUPPLEMENT  # noqa: E402
+from common.gaps import calibrated, piece_gaps, wmedian_of  # noqa: E402
+from common.rings import COMPARISON, suffix  # noqa: E402
+from common.stats import resample, strata_groups, wmedian  # noqa: E402
+
 OUT = R / "clearing_calibration"
-BAND_M = 100.0                       # the 0-50 m band, both sides of the line
 SAM_SPREAD = 0.8                     # SAM 2's width is the 10th-90th percentile spread of the strip
 MIN_CONFIRMED = 8
-CLASSES = ["Under 4.5 in", "4.5-8.6 in", "8.6-12.75 in", "12.75-16 in", "16-24 in", "24-36 in", "Over 36 in"]
 PUBLISHED_FT = {"8.6-12.75 in": 80, "12.75-16 in": 80, "16-24 in": 95, "24-36 in": 110, "Over 36 in": 125}  # INGAA 1999
 EASEMENT_FT = 50
 TEXAS_LAND_KM2 = 676_587             # US Census Bureau, Texas land area
 SCOPES = ["ecoregion", "commodity_group", "service", "status", "location_accuracy"]
 
 
-def wmedian(v, w):
-    o = np.argsort(v)
-    c = np.cumsum(w[o])
-    return v[o][np.searchsorted(c, c[-1] / 2)]
-
-
 def confirmed_widths() -> pd.DataFrame:
-    seg = gpd.read_file(P / "outputs" / "zones" / "sample_v1" / "sample.gpkg", layer="segments",
+    seg = gpd.read_file(SAMPLE / "sample.gpkg", layer="segments",
                         columns=["segment_id", "diameter_class", "diameter_in"])
     rows = []
     for survey in ("row_survey", "width_survey"):
@@ -62,41 +60,36 @@ def class_widths(t: pd.DataFrame, rng=None) -> pd.Series:
     """Cleared width per class; with rng, a bootstrap draw (confirmed strips resampled within class)."""
     c = t[t["confirmed"]]
     if rng is not None:
-        idx = np.concatenate([rng.choice(ix, len(ix)) for ix in c.groupby("diameter_class").indices.values()])
-        c = c.iloc[idx]
+        c = c.iloc[resample(strata_groups(c["diameter_class"]), rng)]
     fit = stats.theilslopes(c["width_m"], np.log(c["diameter_in"].clip(lower=1)))
     med_d = t.groupby("diameter_class")["diameter_in"].median()
     out = {}
-    for k in CLASSES:
+    for k in DIAMETER_CLASSES:
         g = c[c["diameter_class"] == k]["width_m"]
         out[k] = g.median() if len(g) >= MIN_CONFIRMED else fit.intercept + fit.slope * np.log(max(med_d.get(k, 6.0), 1))
     out = pd.Series(out)
-    out["Not recorded"] = c["width_m"].median()
+    out[NOT_RECORDED] = c["width_m"].median()
     return out.clip(lower=5.0)
 
 
 def segments() -> pd.DataFrame:
     """Each piece's band gap (median over springs), with its frame, km and design weight (as coverage_estimate.py)."""
-    keep = ["segment_id", "ring", "index", "diff_all", "diff_same_lc", "stratum", "weight", "diameter_class"] + SCOPES
+    attrs = ["stratum", "weight", "diameter_class"] + SCOPES
     parts = []
-    for f, frame in ((R / "corridor_sample_v1_9springs_pooled" / "segment_spring.csv", "main"),
-                     (R / "corridor_supplement_9springs" / "segment_spring.csv", None)):
+    for f, frame in ((CORRIDOR / "segment_spring.csv", "main"), (CORRIDOR_SUPPLEMENT / "segment_spring.csv", None)):
         cols = pd.read_csv(f, nrows=0).columns
-        d = pd.concat(c[(c["ring"] == "0-50 m") & (c["index"] == "NDVI")]
-                      for c in pd.read_csv(f, usecols=[k for k in keep if k in cols], chunksize=500_000))
-        g = d.groupby(["segment_id"] + [k for k in keep if k in d and k not in ("segment_id", "ring", "index", "diff_all", "diff_same_lc")],
-                      dropna=False, as_index=False)[["diff_same_lc", "diff_all"]].median()
+        g = piece_gaps(f, ["segment_id"] + [k for k in attrs if k in cols], dropna=False)
         parts.append(g.assign(frame=frame))
     main, supp = parts
     main["km"] = 1.0
-    info = pd.read_csv(P / "outputs" / "zones" / "sample_v2_supplement" / "sample_segments.csv",
+    info = pd.read_csv(SUPPLEMENT / "sample_segments.csv",
                        usecols=["segment_id", "frame", "piece_m", "diameter_class"] + [s for s in SCOPES if s != "location_accuracy"] + ["location_accuracy"])
     supp = supp.drop(columns=[c for c in supp if c in info and c != "segment_id"]).merge(info, on="segment_id", how="left")
     supp["km"] = supp.pop("piece_m") / 1000
     d = pd.concat([main, supp], ignore_index=True)
     d["w_km"] = d["weight"] * d["km"]
     d["boot_stratum"] = d["frame"] + "|" + d["stratum"].astype(str)
-    d["diameter_class"] = d["diameter_class"].fillna("Not recorded")
+    d["diameter_class"] = d["diameter_class"].fillna(NOT_RECORDED)
     return d
 
 
@@ -105,18 +98,17 @@ def comparison_ndvi(d: pd.DataFrame) -> float:
     median over a spring's images, median over springs; then the design-weighted median. Cached (the raw files are big)."""
     cache = R / "clearing_calibration" / "comparison_ndvi.csv"     # fixed place: it is a baseline, not a result
     if not cache.exists():
-        zs = P / "outputs" / "geog392_zone_stats"
         per = []
-        for f in sorted(zs.glob("sample_v1_b50_per_image_20[0-9][0-9].csv")):
+        for f in sorted(STATS.glob("sample_v1_b50_per_image_20[0-9][0-9].csv")):
             parts = []
             for c in pd.read_csv(f, usecols=["zone_id", "image", "NDVI_mean", "NDVI_count"], chunksize=2_000_000):
-                c = c[c["zone_id"].str.endswith("_r500-1000") & (c["NDVI_count"] > 0)]
+                c = c[c["zone_id"].str.endswith(suffix(COMPARISON)) & (c["NDVI_count"] > 0)]
                 parts.append(c.assign(v=c["NDVI_mean"] * c["NDVI_count"]).groupby(["zone_id", "image"])[["v", "NDVI_count"]].sum())
             img = pd.concat(parts).groupby(level=[0, 1]).sum()
             img = (img["v"] / img["NDVI_count"]).rename("ndvi").reset_index()
             per.append(img.groupby("zone_id")["ndvi"].median().rename(f.stem[-4:]))
         s = pd.concat(per, axis=1).median(axis=1).rename("comparison_ndvi")
-        s.index = s.index.str.replace("_r500-1000", "", regex=False)
+        s.index = s.index.str.replace(suffix(COMPARISON), "", regex=False)
         cache.parent.mkdir(parents=True, exist_ok=True)
         s.rename_axis("segment_id").to_csv(cache)
     s = pd.read_csv(cache, index_col="segment_id")["comparison_ndvi"]
@@ -126,7 +118,7 @@ def comparison_ndvi(d: pd.DataFrame) -> float:
 
 def estimate(d, widths, measure, mask):
     x = d[mask]
-    v = (x[measure] * BAND_M / x["diameter_class"].map(widths)).to_numpy(float)
+    v = calibrated(x[measure], x["diameter_class"], widths).to_numpy(float)
     ok = np.isfinite(v)
     return wmedian(v[ok], x["w_km"].to_numpy(float)[ok]) if ok.any() else np.nan
 
@@ -140,17 +132,16 @@ def main(a):
     d = segments()
     targets = [("statewide", "main sample (1 km segments, clean comparison ring)", d["frame"] == "main"),
                ("statewide", "all land pipe 100 m or longer", d["frame"].notna())]
-    targets += [("pipe size", k, (d["frame"] == "main") & (d["diameter_class"] == k)) for k in CLASSES]
+    targets += [("pipe size", k, (d["frame"] == "main") & (d["diameter_class"] == k)) for k in DIAMETER_CLASSES]
     targets += [(s, g, (d["frame"] == "main") & (d[s] == g)) for s in SCOPES for g in sorted(d.loc[d["frame"] == "main", s].dropna().unique())]
-    strata = [np.flatnonzero(d["boot_stratum"].to_numpy() == s) for s in d["boot_stratum"].unique()]
+    strata = strata_groups(d["boot_stratum"], sort=False)
     point = {(sc, g, m): estimate(d, W, m, mk) for sc, g, mk in targets for m in ("diff_same_lc", "diff_all")}
-    band = {(sc, g): wmedian(d.loc[mk, "diff_same_lc"].dropna().to_numpy(float), d.loc[mk].dropna(subset=["diff_same_lc"])["w_km"].to_numpy(float))
-            for sc, g, mk in targets}
+    band = {(sc, g): wmedian_of(d.loc[mk], "diff_same_lc", "w_km") for sc, g, mk in targets}
     draws, wdraws = {k: [] for k in point}, []
     for _ in range(a.boot):
         Wb = class_widths(t, rng)
         wdraws.append(Wb)
-        i = np.concatenate([s[rng.integers(0, len(s), len(s))] for s in strata])
+        i = resample(strata, rng)
         db = d.iloc[i].reset_index(drop=True)
         for sc, g, mk in targets:
             mb = mk.to_numpy()[i]

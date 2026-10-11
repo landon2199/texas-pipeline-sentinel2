@@ -17,8 +17,8 @@ Usage: python gap_drivers.py [--arcgis]
 """
 import argparse
 import json
-import os
 import subprocess
+import sys
 from pathlib import Path
 
 import geopandas as gpd
@@ -29,13 +29,14 @@ from sklearn.inspection import partial_dependence, permutation_importance
 from sklearn.metrics import r2_score
 from sklearn.model_selection import KFold, LeaveOneGroupOut
 
-P = Path(r"C:\mydrive\Graduate School\Courses\GEOG_392\projects")
-Z = P / "outputs" / "geog392_zone_stats"
-OUT = P / "outputs" / "results" / "gap_drivers"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.codes import DIAMETER_CLASSES, NLCD_GROUPS  # noqa: E402
+from common.config import ARCPY_PYTHON, CORRIDOR, R, SAMPLE, STATS  # noqa: E402
+from common.gaps import piece_gaps  # noqa: E402
+from common.rings import BAND, suffix  # noqa: E402
+
+OUT = R / "gap_drivers"
 HERE = Path(__file__).resolve().parent
-ARCPY_PYTHON = Path(os.environ.get("ARCPY_PYTHON", "C:/Program Files/ArcGIS/Pro/bin/Python/envs/arcgispro-py3/python.exe"))
-LC = {"developed": [21, 22, 23, 24], "barren": [31], "forest": [41, 42, 43], "shrub": [52], "grassland": [71],
-      "pasture": [81], "crops": [82], "wetland": [90, 95], "water": [11]}
 LABELS = {"diameter_in": "Pipe diameter (in)", "impervious_pct": "Impervious surface (%)", "road": "Roads",
           "developed": "Developed land (impervious descriptor)", "energy": "Well pads and energy sites",
           "dw_built": "Built-up (Dynamic World)", "lc_changed": "Land cover changed 2001-2021", "slope_deg_mean": "Slope (deg)",
@@ -43,27 +44,24 @@ LABELS = {"diameter_in": "Pipe diameter (in)", "impervious_pct": "Impervious sur
 
 
 def table() -> pd.DataFrame:
-    seg = gpd.read_file(P / "outputs" / "zones" / "sample_v1" / "sample.gpkg", layer="segments",
+    seg = gpd.read_file(SAMPLE / "sample.gpkg", layer="segments",
                         columns=["segment_id", "diameter_in", "commodity_group", "service", "status", "location_accuracy",
                                  "ecoregion", "weight"])
     seg["x"], seg["y"] = seg.geometry.centroid.x, seg.geometry.centroid.y
     seg = pd.DataFrame(seg.drop(columns="geometry"))
-    d = pd.concat(c[(c["ring"] == "0-50 m") & (c["index"] == "NDVI")] for c in pd.read_csv(
-        P / "outputs" / "results" / "corridor_sample_v1_9springs_pooled" / "segment_spring.csv",
-        usecols=["segment_id", "ring", "index", "diff_same_lc"], chunksize=500_000))
-    y = d.groupby("segment_id")["diff_same_lc"].median().rename("gap")
+    y = piece_gaps(CORRIDOR / "segment_spring.csv", ["segment_id"], measures=["diff_same_lc"]).set_index("segment_id")["diff_same_lc"].rename("gap")
     lc = []
-    for c in pd.read_csv(Z / "sample_v1_b50_per_image_2024.csv", usecols=["zone_id", "landcover", "NDVI_count"], chunksize=1_000_000):
-        lc.append(c[c["zone_id"].str.endswith("_r0-50")].groupby(["zone_id", "landcover"])["NDVI_count"].sum())
+    for c in pd.read_csv(STATS / "sample_v1_b50_per_image_2024.csv", usecols=["zone_id", "landcover", "NDVI_count"], chunksize=1_000_000):
+        lc.append(c[c["zone_id"].str.endswith(suffix(BAND))].groupby(["zone_id", "landcover"])["NDVI_count"].sum())
     lc = pd.concat(lc).groupby(level=[0, 1]).sum().unstack(fill_value=0)
-    share = pd.DataFrame({f"nlcd_{k}": lc[[c for c in v if c in lc]].sum(axis=1) for k, v in LC.items()})
+    share = pd.DataFrame({f"nlcd_{k}": lc[[c for c in v if c in lc]].sum(axis=1) for k, v in NLCD_GROUPS.items()})
     share = share.div(lc.sum(axis=1), axis=0)
-    mm = pd.read_csv(Z / "sample_v1_b50_and_spills_v1_man_made.csv")
-    fx = pd.read_csv(Z / "sample_v1_b50_and_spills_v1_fixed.csv")
+    mm = pd.read_csv(STATS / "sample_v1_b50_and_spills_v1_man_made.csv")
+    fx = pd.read_csv(STATS / "sample_v1_b50_and_spills_v1_fixed.csv")
     zones = mm.merge(fx, on="zone_id", how="outer")
-    zones = zones[zones["zone_id"].str.endswith("_r0-50")].set_index("zone_id")
-    share.index = share.index.str.replace("_r0-50", "", regex=False)
-    zones.index = zones.index.str.replace("_r0-50", "", regex=False)
+    zones = zones[zones["zone_id"].str.endswith(suffix(BAND))].set_index("zone_id")
+    share.index = share.index.str.replace(suffix(BAND), "", regex=False)
+    zones.index = zones.index.str.replace(suffix(BAND), "", regex=False)
     t = seg.set_index("segment_id").join(y, how="inner").join(share).join(zones)
     t["soil_texture"] = t["soil_texture_mode"].round().astype("Int64").astype(str)
     return t.drop(columns=["soil_texture_mode", "water_share_mean"], errors="ignore").dropna(subset=["gap"])
@@ -168,11 +166,10 @@ def main(a):
         lines += ["", "ArcGIS Pro side by side (Forest-based and Boosted Classification and Regression, same table, unweighted, "
                   f"{arc.get('trees', '?')} trees, 10% random validation): " + (
                       f"validation R² {arc['validation_r2']}; top variables " + ", ".join(arc["top"]) + "." if "top" in arc else str(arc))]
-    s = pd.read_csv(P / "outputs" / "results" / "corridor_sample_v1_9springs_pooled" / "statewide.csv")
+    s = pd.read_csv(CORRIDOR / "statewide.csv")
     s = s[(s["springs"] == "all springs") & (s["ring"] == "0-50 m") & (s["index"] == "NDVI") & (s["measure"] == "same land cover")
           & (s["scope"] == "diameter_class") & (s["group"] != "Not recorded")]
-    order = ["Under 4.5 in", "4.5-8.6 in", "8.6-12.75 in", "12.75-16 in", "16-24 in", "24-36 in", "Over 36 in"]
-    s = s.set_index("group").reindex(order).dropna(subset=["weighted_median"])
+    s = s.set_index("group").reindex(DIAMETER_CLASSES).dropna(subset=["weighted_median"])
     lines += ["", "The model predicts single segments poorly, but its partial dependence points the same way as the design-based "
               "estimates by pipe size (corridor.py, weighted medians with 95% intervals): " +
               "; ".join(f"{g} {r.weighted_median:+.4f} [{r.lo95:+.4f}, {r.hi95:+.4f}]" for g, r in s.iterrows()) +

@@ -25,19 +25,16 @@ import pyogrio
 from matplotlib.patches import Patch
 
 CODE = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(CODE))
 sys.path.insert(0, str(CODE / "zones"))
+from common.codes import NLCD  # noqa: E402
+from common.config import EE_PROJECT, R, S  # noqa: E402
+from common.rings import BAND, COMPARISON, segment_of, suffix  # noqa: E402
 from labels import station  # noqa: E402
 from stations import route_segments  # noqa: E402
 
-P = Path(r"C:\mydrive\Graduate School\Courses\GEOG_392\projects")
-S = P / "outputs" / "zones" / "statewide"
-OUT = P / "outputs" / "results" / "strip_diagram"
-NLCD = {11: ("Open water", "#466b9f"), 21: ("Developed, open", "#dec5c5"), 22: ("Developed, low", "#d99282"),
-        23: ("Developed, medium", "#eb0000"), 24: ("Developed, high", "#ab0000"), 31: ("Barren", "#b3ac9f"),
-        41: ("Deciduous forest", "#68ab5f"), 42: ("Evergreen forest", "#1c5f2c"), 43: ("Mixed forest", "#b5c58f"),
-        52: ("Shrub/scrub", "#ccb879"), 71: ("Grassland", "#dfdfc2"), 81: ("Pasture/hay", "#dcd939"),
-        82: ("Cultivated crops", "#ab6c28"), 90: ("Woody wetlands", "#b8d9eb"), 95: ("Herbaceous wetlands", "#6c9fb8")}
-RING, COMP = "_r0-50", "_r500-1000"
+OUT = R / "strip_diagram"
+RING, COMP = suffix(BAND), suffix(COMPARISON)
 
 
 def zone_values(route: str, seg: pd.DataFrame) -> pd.DataFrame:
@@ -51,7 +48,7 @@ def zone_values(route: str, seg: pd.DataFrame) -> pd.DataFrame:
     sys.path.insert(0, str(CODE / "extract"))
     import part2
     from run_springs import read_log, write_log
-    ee.Initialize(project="research-476723")
+    ee.Initialize(project=EE_PROJECT)
     ids = ",".join(f"'{s}'" for s in seg["segment_id"])
     rings = pd.concat([pyogrio.read_dataframe(f, layer="rings", columns=["zone_id", "segment_id"], where=f"segment_id IN ({ids})")
                        for f in sorted(S.glob("[0-9][0-9]_*.gpkg"))])
@@ -73,7 +70,7 @@ def zone_values(route: str, seg: pd.DataFrame) -> pd.DataFrame:
 
 
 def gaps(d: pd.DataFrame, idx: str, min_px: int = 20) -> pd.DataFrame:
-    d = d.assign(segment_id=d["zone_id"].str.rsplit("_r", n=1).str[0],
+    d = d.assign(segment_id=segment_of(d["zone_id"]),
                  which=np.where(d["zone_id"].str.endswith(COMP), "comp", "ring"))
     m, n = f"{idx}_mean", f"{idx}_count"
     w = d.pivot_table(index=["segment_id", "landcover"], columns="which", values=[m, n], aggfunc="first")

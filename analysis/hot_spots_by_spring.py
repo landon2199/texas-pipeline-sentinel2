@@ -15,8 +15,8 @@ Usage: python hot_spots_by_spring.py [--index NDVI] [--neighbors 8] [--out outpu
 """
 import argparse
 import json
-import os
 import subprocess
+import sys
 from pathlib import Path
 
 import geopandas as gpd
@@ -24,10 +24,10 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-P = Path(r"C:\mydrive\Graduate School\Courses\GEOG_392\projects")
-AGENT = P / "outputs" / "agent"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.config import AGENT, ARCPY_PYTHON, CORRIDOR, ECOREGIONS, R  # noqa: E402
+
 HERE = Path(__file__).resolve().parent
-ARCPY_PYTHON = Path(os.environ.get("ARCPY_PYTHON", "C:/Program Files/ArcGIS/Pro/bin/Python/envs/arcgispro-py3/python.exe"))
 CLASSES = [("cold spot in 7-9 springs", "#08306b"), ("cold spot in 4-6", "#2171b5"), ("cold spot in 1-3", "#9ecae1"),
            ("hot spot in 1-3", "#fcbba1"), ("hot spot in 4-6", "#ef3b2c"), ("hot spot in 7-9 springs", "#67000d")]
 
@@ -67,7 +67,7 @@ def figure(res: gpd.GeoDataFrame, index: str, path: Path):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    eco = gpd.read_file(P / "data" / "statewide" / "ecoregions_epa_l3_texas.gpkg").to_crs(res.crs)
+    eco = gpd.read_file(ECOREGIONS).to_crs(res.crs)
     fig, ax = plt.subplots(figsize=(6.5, 6.2), dpi=200)
     eco.boundary.plot(ax=ax, color="#9a9a9a", linewidth=0.4)
     never = res[res["class"] == "never"]
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--index", default="NDVI")
     ap.add_argument("--neighbors", type=int, default=8)
-    ap.add_argument("--corridor", type=Path, default=P / "outputs" / "results" / "corridor_sample_v1_9springs_pooled",
+    ap.add_argument("--corridor", type=Path, default=CORRIDOR,
                     help="corridor results folder, for the statewide gap of each spring")
-    ap.add_argument("--out", type=Path, default=P / "outputs" / "results" / "hot_spots_by_spring")
+    ap.add_argument("--out", type=Path, default=R / "hot_spots_by_spring")
     main(ap.parse_args())
